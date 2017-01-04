@@ -5,12 +5,12 @@ A very lightweight build utility written in Go.
 
 ### Install
 
-    $ git clone https://github.com/aisola/gmake.git
+    $ git clone https://github.com/extrame/gmake.git
     $ go build
 
 ### Getting Started
 
-In any project, create a file `GMakefile` and use the following syntax to create rules:
+In any project, create a file `main.gmake` and use the following syntax to create rules:
 
     target {
         command;

@@ -14,13 +14,22 @@ const T_RCBRAC string = "T_RCBRAC"
 const T_COMMA string = "T_COMMA"
 const T_SEMI string = "T_SEMI"
 
-// asts
+const T_LITEM string = "T_LITEM"
+const T_RITEM string = "T_RITEM"
 
-type Directive struct {
-	Name string
-	// Dependencies []string
-	Commands []Command
-}
+const T_LCLASS string = "T_LCLASS"
+const T_CLASS_MARK string = "T_CLASS_MARK"
+
+const T_LID string = "T_LID"
+const T_ID_MARK string = "T_ID_MARK"
+
+const alphavalues = `abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ`
+const numbers = `0123456789`
+const classMarker = "."
+const idMarker = "#"
+const platformMaker = "@"
+
+// asts
 
 type Command struct {
 	Parts []string

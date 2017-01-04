@@ -1,9 +1,11 @@
 package main
 
-import "fmt"
-import "strconv"
-import "strings"
-import "unicode/utf8"
+import (
+	"fmt"
+	"strconv"
+	"strings"
+	"unicode/utf8"
+)
 
 // LexToken holds is a (type, value) array.
 type LexToken [3]string
@@ -16,12 +18,17 @@ var EOF string = "+++EOF+++"
 type lexerState func(*lexer) lexerState
 
 // Lexer creates a new scanner for the input string.
-func Lexer(name, input string) (*lexer, []LexToken) {
+func Lexer(name, input string, initialState ...lexerState) (*lexer, []LexToken) {
 	l := &lexer{
 		name:   name,
 		input:  input,
 		tokens: make([]LexToken, 0),
 		lineno: 1,
+	}
+	if len(initialState) > 0 {
+		l.initialState = initialState[0]
+	} else {
+		l.initialState = initialLexerState
 	}
 	l.Run()
 	return l, l.tokens
@@ -29,12 +36,13 @@ func Lexer(name, input string) (*lexer, []LexToken) {
 
 // lexer holds the state of the scanner.
 type lexer struct {
-	name   string     // used only for error reports.
-	input  string     // the string being scanned.
-	start  int        // start position of this item.
-	pos    int        // current position in the input.
-	width  int        // width of last rune read from input.
-	tokens []LexToken // scanned items.
+	name         string     // used only for error reports.
+	input        string     // the string being scanned.
+	start        int        // start position of this item.
+	pos          int        // current position in the input.
+	width        int        // width of last rune read from input.
+	tokens       []LexToken // scanned items.
+	initialState lexerState
 
 	lineno int
 }
@@ -107,19 +115,63 @@ func (l *lexer) emit(t string) {
 // run lexes the input by executing state functions until
 // the state is nil.
 func (l *lexer) Run() {
-	for state := initialLexerState; state != nil; {
+	for state := l.initialState; state != nil; {
 		state = state(l)
 	}
 }
 
-// isAlpha() checks if a character is an alpha
-func isAlpha(char string) bool {
-	alphavalues := "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+// isName() checks if a character is an alpha
+func isName(char string) bool {
+	testStr := alphavalues + classMarker + idMarker + platformMaker
+	if strings.Index(testStr, char) >= 0 {
+		return true
+	} else {
+		return false
+	}
+}
+
+// isName() checks if a character is an alpha
+func isCharacter(char string) bool {
 	if strings.Index(alphavalues, char) >= 0 {
 		return true
 	} else {
 		return false
 	}
+}
+
+func itemLexerState(l *lexer) lexerState {
+	for r := l.next(); r != EOF; r = l.next() {
+		if r == "\r" || r == " " || r == "\t" {
+			l.ignore()
+		} else if r == "\n" {
+			l.lineno += 1
+			l.ignore()
+		} else if r == "." {
+			l.emit(T_CLASS_MARK)
+		} else if r == "#" {
+			l.emit(T_ID_MARK)
+		} else if isCharacter(r) {
+			l.acceptRun(alphavalues + numbers)
+			if len(l.tokens) >= 1 {
+				switch l.tokens[len(l.tokens)-1][0] {
+				case T_CLASS_MARK:
+					l.emit(T_LCLASS)
+				case T_ID_MARK:
+					l.emit(T_LID)
+				default:
+					l.emit(T_LITEM)
+				}
+			} else {
+				l.emit(T_LITEM)
+			}
+		} else if r == "{" || r == "(" {
+			l.backup()
+			l.emit(T_RITEM)
+			return initialLexerState
+		}
+	}
+	l.emit(T_EOF)
+	return nil
 }
 
 // initialState is the starting point for the
@@ -133,15 +185,15 @@ func initialLexerState(l *lexer) lexerState {
 		} else if r == "\n" {
 			l.lineno += 1
 			l.ignore()
-		} else if isAlpha(r) {
-			l.acceptRun("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
-			l.emit(T_DIRECT)
+		} else if isName(r) {
+			l.backup()
+			return itemLexerState
 		} else if r == "{" {
 			l.emit(T_LCBRAC)
 			return commandState
 		} else if r == "(" {
 			l.emit(T_LPAREN)
-			return dependancyState
+			return dependencyLexerState
 		} else {
 			return l.errorf("Illegal character '%s'.", r)
 		}
@@ -151,17 +203,17 @@ func initialLexerState(l *lexer) lexerState {
 	return nil
 }
 
-func dependancyState(l *lexer) lexerState {
+func dependencyLexerState(l *lexer) lexerState {
 	for r := l.next(); r != ")"; r = l.next() {
 		if r == " " || r == "\t" || r == "\r" {
 			l.ignore()
 		} else if r == "\n" {
 			l.lineno += 1
-			l.ignore()
+			l.emit(T_COMMA)
 		} else if r == EOF {
 			return l.errorf("Unclosed dependancy switch...")
-		} else if l.accept(`abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789~!@#$%^&*_+=-|\]['":/?.>,<`) {
-			l.acceptRun(`abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789~!@#$%^&*_+=-|\]['":/?.>,<`)
+		} else if isName(r) {
+			l.acceptRun(alphavalues + numbers + classMarker + idMarker + platformMaker)
 			l.emit(T_CMDPART)
 		} else if r == "," {
 			l.emit(T_COMMA)
@@ -180,16 +232,12 @@ func commandState(l *lexer) lexerState {
 			l.ignore()
 		} else if r == "\n" {
 			l.lineno += 1
-			l.ignore()
+			l.emit(T_SEMI)
 		} else if r == EOF {
 			return l.errorf("Unclosed statement...")
-		} else if l.accept(`abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789~!@#$%^&*_+=-|\]['":/?.>,<`) {
+		} else {
 			l.acceptRun(`abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789~!@#$%^&*_+=-|\]['":/?.>,<`)
 			l.emit(T_CMDPART)
-		} else if r == ";" {
-			l.emit(T_SEMI)
-		} else {
-			return l.errorf("Illegal character '%s'.", r)
 		}
 	}
 	l.emit(T_RCBRAC)

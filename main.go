@@ -4,7 +4,6 @@ import "flag"
 import "fmt"
 import "io/ioutil"
 import "os"
-import "os/exec"
 
 const (
 	help_text string = `
@@ -25,16 +24,7 @@ const (
 `
 )
 
-var AST []*Directive
-
-func getDirective(dname string) *Directive {
-	for i := 0; i < len(AST); i++ {
-		if AST[i].Name == dname {
-			return AST[i]
-		}
-	}
-	return nil
-}
+var AST Doc
 
 func combiner(strs []string) string {
 	var fullstr string
@@ -72,33 +62,10 @@ func main() {
 
 		args := flag.Args()
 
-		var dir *Directive
 		if len(args) == 0 {
-			dir = getDirective("all")
-			if dir == nil {
-				fmt.Println("gmake: fatal: no all directive defined")
-				os.Exit(1)
-			}
+			AST.Exec()
 		} else {
-			dir = getDirective(args[0])
-			if dir == nil {
-				fmt.Printf("gmake: fatal: no '%s' directive defined")
-				os.Exit(1)
-			}
+			AST.Exec(args[0])
 		}
-
-		for i := 0; i < len(dir.Commands); i++ {
-			fmt.Println(combiner(dir.Commands[i].Parts))
-
-			cm, parts := dir.Commands[i].Parts[0], dir.Commands[i].Parts[1:]
-
-			cmd := exec.Command(cm, parts...)
-			err := cmd.Run()
-			if err != nil {
-				fmt.Printf("gmake: fatal: '%s'", err)
-				os.Exit(1)
-			}
-		}
-
 	}
 }
