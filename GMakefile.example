@@ -1,12 +1,15 @@
-
+import {
+    github.com/extrame/goblet
+}
 all {
     go build -o autogmake main.go lang.go lexer.go parser.go;
 }
-
+file {
+    ./*/*.go
+}
 clean { 
     rm autogmake;
 }
-
 install {
     git clone https://github.com/aisola/ObjectWeb.git;
     cd ObjectWeb;

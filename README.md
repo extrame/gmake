@@ -1,7 +1,7 @@
 GMake (1.0)
 ===========
 
-A very lightweight build utility written in Go.
+A very lightweight build utility written in Go. 
 
 ### Install
 
@@ -10,14 +10,13 @@ A very lightweight build utility written in Go.
 
 ### Getting Started
 
-In any project, create a file `main.gmake` and use the following syntax to create rules:
+In any project, create a file `gmakefile` and use the following syntax to create rules:
 
     target {
-        command;
+        command
     }
 
-Notice that the commands end in semicolons. This is required. A more realistic example 
-is shown below compiling a go program:
+A more realistic example is shown below compiling a go program:
 
     all {
         go build -o hello main.go;
@@ -31,5 +30,40 @@ is shown below compiling a go program:
         rm hello;
     }
 
-Enjoy!
-ACI    
+### Define Target like css
+
+You can define a target like css, for example, define a target with class
+
+	clean.deploy {
+	...
+	}
+	
+Or define a target with ID
+
+	clean#deployForTest{
+	...
+	}
+	
+### Dependency
+
+You can make target depend on some target using CSS selector, like:
+
+	deploy.main (.deploy) {
+	...
+	}
+	
+This target depend on all target with **deploy** class,if you have two target with **deploy** class before this target, they will execute before this target with text order.
+
+For example
+
+	a.deploy {
+		echo 1
+	}
+	b.deploy {
+		echo 2
+	}
+	c.deploy (.deploy){
+		echo 3
+	}
+
+**gmake c** will print 1,2,3 in order

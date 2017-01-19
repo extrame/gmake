@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"testing"
 )
 
@@ -46,9 +45,6 @@ func TestSelect1(t *testing.T) {
     `)
 	ds := Parse("GMAKE", tokens)
 	selected := ds.Select(".main")
-	for _, dir := range selected {
-		log.Println(dir)
-	}
 	if len(selected) != 1 {
 		t.Error("wrong selected directive number", len(selected))
 	}

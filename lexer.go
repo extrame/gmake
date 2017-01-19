@@ -5,6 +5,8 @@ import (
 	"strconv"
 	"strings"
 	"unicode/utf8"
+
+	"github.com/golang/glog"
 )
 
 // LexToken holds is a (type, value) array.
@@ -102,7 +104,7 @@ func (l *lexer) errorf(format string, args ...interface{}) lexerState {
 	l.tokens = nil
 
 	args = []interface{}{l.lineno}
-	fmt.Printf("gmake:%d: "+format+"\n", args...)
+	glog.Infof("gmake:%d: "+format+"\n", args...)
 	return nil
 }
 
@@ -141,7 +143,7 @@ func isCharacter(char string) bool {
 
 func itemLexerState(l *lexer) lexerState {
 	for r := l.next(); r != EOF; r = l.next() {
-		if r == "\r" || r == " " || r == "\t" {
+		if r == "\r" {
 			l.ignore()
 		} else if r == "\n" {
 			l.lineno += 1

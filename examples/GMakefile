@@ -1,0 +1,9 @@
+a.deploy {
+    echo 1
+}
+b.deploy {
+    echo 2
+}
+c (.deploy){
+    echo 3
+}
