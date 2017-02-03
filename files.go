@@ -46,7 +46,7 @@ func IsFileChanged(name string) bool {
 		for _, v := range matches {
 			if fi, err := os.Stat(v); err == nil {
 				if oldMT, ok := Env.FileTail[v]; (ok && fi.ModTime().Sub(oldMT) > 0) || !ok {
-					glog.Infoln(v + "is changed")
+					glog.Infoln(v, "is changed")
 					res = true
 				}
 				Env.FileTail[v] = fi.ModTime()

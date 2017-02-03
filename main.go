@@ -8,13 +8,15 @@ import "github.com/golang/glog"
 
 const (
 	help_text string = `
-    Usage: gmake [OPTION]...
-    
-    A very lightweight build tool.
+Usage: gmake [OPTION]...
 
-          --help     display this help and exit
-          --version  output version information and exit
-    `
+A very lightweight build tool.
+
+	--help		display this help and exit
+	--version	output version information and exit
+	--watch		watch the file
+	
+`
 	version_text = `
     gmake (aisola/gmake) 0.1
 
@@ -37,13 +39,12 @@ func combiner(strs []string) string {
 
 // Starts processing
 func main() {
-	help := flag.Bool("help", false, help_text)
+	// help := flag.Bool("help", false, help_text)
 	version := flag.Bool("version", false, version_text)
+	watch := flag.Bool("watch", false, "watch for file changes")
 	flag.Parse()
 
-	if *help {
-		glog.Fatalln(help_text)
-	} else if *version {
+	if *version {
 		glog.Fatalln(version_text)
 	} else {
 		// get contents
@@ -60,9 +61,9 @@ func main() {
 		args := flag.Args()
 
 		if len(args) == 0 {
-			AST.Exec()
+			AST.Exec(*watch)
 		} else {
-			AST.Exec(args[0])
+			AST.Exec(*watch, args[0])
 		}
 	}
 }

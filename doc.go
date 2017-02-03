@@ -1,17 +1,34 @@
 package main
 
+import (
+	"github.com/golang/glog"
+)
+
 type Doc []*Directive
 
 //Exec execute the Doc file
-func (g *Doc) Exec(selectors ...string) {
+func (g *Doc) Exec(waitingForWatch bool, selectors ...string) {
 	selectStr := ".main"
 	if len(selectors) > 0 {
 		selectStr = selectors[0]
 	}
 	selected := g.Select(selectStr)
-	ctx := &Context{}
+	ctx := &Context{wait: waitingForWatch}
+	var execChan = make(chan Result, len(selected))
+	signalNo := 0
 	for _, dir := range selected {
-		dir.Exec(g, ctx)
+		go dir.Exec(g, ctx, execChan, signalNo)
+		signalNo++
+	}
+	for {
+		select {
+		case signal := <-execChan:
+			glog.Infof("No. %d is executed", signal.Serial)
+			signalNo--
+			if signalNo <= 0 && !waitingForWatch {
+				return
+			}
+		}
 	}
 	// TODO
 }

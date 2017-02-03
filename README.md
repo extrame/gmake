@@ -62,7 +62,7 @@ For example
 	b.deploy {
 		echo 2
 	}
-	c.deploy (.deploy){
+	c (.deploy){
 		echo 3
 	}
 

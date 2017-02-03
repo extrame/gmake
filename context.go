@@ -7,6 +7,7 @@ import (
 
 type Context struct {
 	variables map[string]interface{}
+	wait      bool
 }
 
 func (ctx *Context) replaceVar(origin ...string) []string {

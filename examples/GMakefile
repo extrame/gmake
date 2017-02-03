@@ -4,6 +4,9 @@ a.deploy {
 b.deploy {
     echo 2
 }
+file.deploy {
+    version
+}
 c (.deploy){
     echo 3
 }
