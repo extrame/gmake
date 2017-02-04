@@ -13,7 +13,7 @@ func (g *Doc) Exec(waitingForWatch bool, selectors ...string) {
 		selectStr = selectors[0]
 	}
 	selected := g.Select(selectStr)
-	ctx := &Context{wait: waitingForWatch}
+	ctx := &Context{wait: waitingForWatch, directivesInStack: make(map[int]bool)}
 	var execChan = make(chan Result, len(selected))
 	signalNo := 0
 	for _, dir := range selected {

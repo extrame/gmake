@@ -24,6 +24,7 @@ func ParseItem(name string, tokens []LexToken) Item {
 		name:   name,
 		tokens: tokens,
 		pos:    -1,
+		serial: 0,
 	}
 	p.newDirective(name)
 	p.initState = itemState
@@ -36,6 +37,7 @@ type parser struct {
 	name   string
 	tokens []LexToken
 	pos    int
+	serial int
 
 	ast              Doc // the ast
 	initState        parserState
@@ -44,7 +46,8 @@ type parser struct {
 }
 
 func (p *parser) newDirective(name string) {
-	p.currentDirective = &Directive{Name: Item{Type: name}, Commands: make([]Command, 0)}
+	p.currentDirective = &Directive{Name: Item{Type: name}, Commands: make([]Command, 0), Serial: p.serial}
+	p.serial++
 	// p.cmdparts = Command{Parts: make([]string, 0)}
 }
 

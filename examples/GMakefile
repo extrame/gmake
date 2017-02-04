@@ -7,6 +7,6 @@ b.deploy {
 file.deploy {
     version
 }
-c (.deploy){
+c.deploy (.deploy){
     echo 3
 }

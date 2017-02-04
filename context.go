@@ -6,8 +6,9 @@ import (
 )
 
 type Context struct {
-	variables map[string]interface{}
-	wait      bool
+	variables         map[string]interface{}
+	wait              bool
+	directivesInStack map[int]bool
 }
 
 func (ctx *Context) replaceVar(origin ...string) []string {

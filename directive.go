@@ -12,6 +12,7 @@ import (
 )
 
 type Directive struct {
+	Serial       int
 	Name         Item
 	Dependencies []string
 	Commands     []Command
@@ -23,6 +24,7 @@ type Result struct {
 }
 
 func (d *Directive) Exec(doc *Doc, ctx *Context, parentChan chan Result, serialNo int) bool {
+	ctx.directivesInStack[d.Serial] = true
 	glog.Infoln("in", d.Name.String())
 	var signalNo = 0
 	//check Dependencies
@@ -30,7 +32,12 @@ func (d *Directive) Exec(doc *Doc, ctx *Context, parentChan chan Result, serialN
 	var dependencies Doc
 	for _, dependency := range d.Dependencies {
 		glog.Infoln("go to dependency", dependency)
-		dependencies = append(dependencies, doc.Select(dependency)...)
+		selected := doc.Select(dependency)
+		for _, v := range selected {
+			if _, ok := ctx.directivesInStack[v.Serial]; !ok {
+				dependencies = append(dependencies, v)
+			}
+		}
 	}
 	var execChan = make(chan Result, len(dependencies))
 
