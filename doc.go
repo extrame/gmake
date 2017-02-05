@@ -6,6 +6,30 @@ import (
 
 type Doc []*Directive
 
+func (g Doc) Len() int {
+	return len(g)
+}
+
+func (g Doc) Less(a int, b int) bool {
+	first := g[a]
+	second := g[b]
+	if first.Name.Type == "env" {
+		return true
+	} else if first.Name.Type == "var" {
+		if second.Name.Type == "env" {
+			return false
+		}
+	}
+	return false
+}
+
+func (g Doc) Swap(a, b int) {
+	first := g[a]
+	second := g[b]
+	g[b] = first
+	g[a] = second
+}
+
 //Exec execute the Doc file
 func (g *Doc) Exec(waitingForWatch bool, selectors ...string) {
 	selectStr := ".main"

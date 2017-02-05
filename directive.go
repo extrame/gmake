@@ -7,6 +7,8 @@ import (
 
 	"time"
 
+	"sort"
+
 	"github.com/BurntSushi/toml"
 	"github.com/golang/glog"
 )
@@ -41,9 +43,16 @@ func (d *Directive) Exec(doc *Doc, ctx *Context, parentChan chan Result, serialN
 	}
 	var execChan = make(chan Result, len(dependencies))
 
+	sort.Sort(dependencies)
+
 	for _, d := range dependencies {
 		hasDependency = true
-		go d.Exec(doc, ctx, execChan, signalNo)
+		//TODO this should be implented by chan
+		if d.Name.Type == "env" || d.Name.Type == "var" {
+			d.Exec(doc, ctx, execChan, signalNo)
+		} else {
+			go d.Exec(doc, ctx, execChan, signalNo)
+		}
 		signalNo++
 	}
 	//waiting for dependencies
@@ -62,7 +71,6 @@ func (d *Directive) Exec(doc *Doc, ctx *Context, parentChan chan Result, serialN
 						exec++
 					}
 				}
-				glog.Infoln(myCheckList, exec, signalNo)
 			}
 		}
 
@@ -72,8 +80,11 @@ func (d *Directive) Exec(doc *Doc, ctx *Context, parentChan chan Result, serialN
 			glog.Infoln("go to exec")
 			resultCode, needWait = d.exec(ctx)
 		}
-		parentChan <- Result{serialNo, resultCode}
-		if len(myCheckList) == serialNo && !ctx.wait {
+		glog.Infof("[%s] %d %d", d.Name.String(), len(myCheckList), signalNo)
+		if len(myCheckList) == signalNo {
+			parentChan <- Result{serialNo, resultCode}
+		}
+		if len(myCheckList) == signalNo && !ctx.wait {
 			break
 		} else if !hasDependency {
 			if needWait {
