@@ -18,7 +18,7 @@ func TestDoc_Exec(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tt.g.Exec(tt.args.selectors...)
+			tt.g.Exec(false, tt.args.selectors...)
 		})
 	}
 }

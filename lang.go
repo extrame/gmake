@@ -28,6 +28,7 @@ const numbers = `0123456789`
 const classMarker = "."
 const idMarker = "#"
 const platformMaker = "@"
+const splitMaker = "_"
 
 // asts
 

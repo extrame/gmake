@@ -1,6 +1,8 @@
 package main
 
 import (
+	"fmt"
+
 	"github.com/golang/glog"
 )
 
@@ -36,12 +38,18 @@ func (g *Doc) Exec(waitingForWatch bool, selectors ...string) {
 	if len(selectors) > 0 {
 		selectStr = selectors[0]
 	}
+	glog.Infoln("try to execute by selector", selectors)
 	selected := g.Select(selectStr)
+	glog.Infof("selected (%d)", len(selected))
+	if len(selectors) > 0 && len(selected) == 0 {
+		fmt.Printf("selector %s doesn't existed\n", selectors[0])
+	}
 	ctx := &Context{wait: waitingForWatch, directivesInStack: make(map[int]bool)}
 	var execChan = make(chan Result, len(selected))
 	signalNo := 0
 	for _, dir := range selected {
-		go dir.Exec(g, ctx, execChan, signalNo)
+		glog.Infoln("exec selector", dir)
+		dir.Exec(g, ctx, execChan, signalNo)
 		signalNo++
 	}
 	for {
@@ -64,13 +72,17 @@ func (g *Doc) Select(selector string) Doc {
 
 func (g *Doc) selectByItem(selectItem Item) Doc {
 	d := make(Doc, 0)
+	glog.Infoln("selected by selector", selectItem)
 	for _, item := range *g {
+		glog.Info("compare with item", item.Name)
 		if selectItem.Id != "" && item.Name.Id != selectItem.Id {
 			continue
 		}
+		glog.Info("|same id|")
 		if selectItem.Type != "" && item.Name.Type != selectItem.Type {
 			continue
 		}
+		glog.Info("|same type|")
 		var testLength = len(selectItem.Classes)
 		for _, cls := range selectItem.Classes {
 			if item.Name.hasClass(cls) {
@@ -80,6 +92,7 @@ func (g *Doc) selectByItem(selectItem Item) Doc {
 		if testLength > 0 {
 			continue
 		}
+		glog.Info("|same class")
 		d = append(d, item)
 	}
 	return d

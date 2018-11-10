@@ -2,14 +2,13 @@ package main
 
 import (
 	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/golang/glog"
 )
 
 func getCurrentDirectory() string {
-	dir, err := filepath.Abs(filepath.Dir(os.Args[0]))
+	dir, err := os.Getwd()
 	if err != nil {
 		glog.Fatalln(err)
 	}
