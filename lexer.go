@@ -1,11 +1,6 @@
 package main
 
 import (
-<<<<<<< HEAD
-=======
-	"fmt"
-	"os"
->>>>>>> 0e83d21c43682e10fd195d42b3b943bd0e4a94cf
 	"strconv"
 	"strings"
 	"unicode/utf8"
@@ -237,10 +232,6 @@ func dependencyLexerState(l *lexer) lexerState {
 		} else if r == "," {
 			l.emit(T_COMMA)
 		} else {
-<<<<<<< HEAD
-=======
-			fmt.Println("Hello world!", r)
->>>>>>> 0e83d21c43682e10fd195d42b3b943bd0e4a94cf
 			return l.errorf("Illegal character '%s'.", r)
 		}
 	}
