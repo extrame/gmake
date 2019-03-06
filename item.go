@@ -1,5 +1,9 @@
 package main
 
+import (
+	"fmt"
+)
+
 type Item struct {
 	Id      string
 	Type    string
@@ -16,5 +20,5 @@ func (i *Item) hasClass(name string) bool {
 }
 
 func (i *Item) String() string {
-	return i.Type
+	return fmt.Sprintf("[Id]%s,[Type]%s,[Classed]%v", i.Id, i.Type, i.Classes)
 }

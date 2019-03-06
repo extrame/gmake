@@ -1,6 +1,7 @@
 package main
 
 import (
+	"log"
 	"os"
 	"os/exec"
 	"strings"
@@ -51,7 +52,7 @@ func (d *Directive) Exec(doc *Doc, ctx *Context, parentChan chan Result, serialN
 		if d.Name.Type == "env" || d.Name.Type == "var" {
 			d.Exec(doc, ctx, execChan, signalNo)
 		} else {
-			go d.Exec(doc, ctx, execChan, signalNo)
+			d.Exec(doc, ctx, execChan, signalNo)
 		}
 		signalNo++
 	}
@@ -156,7 +157,7 @@ func (d *Directive) exec(ctx *Context) (bool, bool) {
 			cmd.Stdin = os.Stdin
 			err := cmd.Run()
 			if err != nil && mustSuccess {
-				glog.Fatalf("gmake: fatal: '%s'", err)
+				log.Fatalf("gmake: fatal: '%s'", err)
 			}
 			glog.Infoln("exec success")
 		}

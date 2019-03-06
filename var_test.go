@@ -1,6 +1,9 @@
 package main
 
-import "testing"
+import (
+	"fmt"
+	"testing"
+)
 
 func Test_getCurrentDirectory(t *testing.T) {
 	tests := []struct {
@@ -9,6 +12,8 @@ func Test_getCurrentDirectory(t *testing.T) {
 	}{
 	// TODO: Add test cases.
 	}
+	fmt.Println("--------")
+	fmt.Println(getCurrentDirectory())
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := getCurrentDirectory(); got != tt.want {
@@ -31,5 +36,5 @@ func TestVar(t *testing.T) {
 		}
     `)
 	ds := Parse("GMAKE", tokens)
-	ds.Exec()
+	ds.Exec(false)
 }

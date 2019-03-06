@@ -16,7 +16,7 @@ func TestEnv(t *testing.T) {
 		){}
     `)
 	ds := Parse("GMAKE", tokens)
-	ds.Exec()
+	ds.Exec(false)
 	setted := os.Getenv("GOPATH")
 	if setted != "D://test" {
 		t.Errorf("set env error expected 'D://test' but is '%s'", setted)
@@ -34,7 +34,7 @@ func TestEnvAppend(t *testing.T) {
 		){}
     `)
 	ds := Parse("GMAKE", tokens)
-	ds.Exec()
+	ds.Exec(false)
 	setted := os.Getenv("GOPATH")
 	if setted == "D://test" {
 		t.Errorf("set env error not expected 'D://test' ", setted)
@@ -52,7 +52,7 @@ func TestEnvWithVar(t *testing.T) {
 		){}
     `)
 	ds := Parse("GMAKE", tokens)
-	ds.Exec()
+	ds.Exec(false)
 	setted := os.Getenv("GOPATH")
 	if setted != getCurrentDirectory() {
 		t.Errorf("set env error expected '%s' but is '%s'", getCurrentDirectory(), setted)

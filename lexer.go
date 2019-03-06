@@ -1,6 +1,11 @@
 package main
 
 import (
+<<<<<<< HEAD
+=======
+	"fmt"
+	"os"
+>>>>>>> 0e83d21c43682e10fd195d42b3b943bd0e4a94cf
 	"strconv"
 	"strings"
 	"unicode/utf8"
@@ -97,6 +102,17 @@ func (l *lexer) acceptRun(valid string) {
 	l.backup()
 }
 
+// Run consumes a run of runes from the invalid set.
+func (l *lexer) rejectRun(valid string) {
+	for c := l.next(); strings.Index(valid, c) < 0; c = l.next() {
+		fmt.Print(c)
+		if c == EOF {
+			os.Exit(1)
+		}
+	}
+	l.backup()
+}
+
 // error returns an error and terminates the scan
 // by passing back a nil pointer that will be the next
 // state, terminating l.run.
@@ -125,7 +141,7 @@ func (l *lexer) Run() {
 
 // isName() checks if a character is an alpha
 func isName(char string) bool {
-	testStr := alphavalues + classMarker + idMarker + platformMaker
+	testStr := alphavalues + classMarker + idMarker + platformMaker + splitMaker
 	if strings.Index(testStr, char) >= 0 {
 		return true
 	} else {
@@ -154,7 +170,7 @@ func itemLexerState(l *lexer) lexerState {
 		} else if r == "#" {
 			l.emit(T_ID_MARK)
 		} else if isCharacter(r) {
-			l.acceptRun(alphavalues + numbers)
+			l.acceptRun(alphavalues + numbers + splitMaker)
 			if len(l.tokens) >= 1 {
 				switch l.tokens[len(l.tokens)-1][0] {
 				case T_CLASS_MARK:
@@ -216,11 +232,15 @@ func dependencyLexerState(l *lexer) lexerState {
 		} else if r == EOF {
 			return l.errorf("Unclosed dependancy switch...")
 		} else if isName(r) {
-			l.acceptRun(alphavalues + numbers + classMarker + idMarker + platformMaker)
+			l.acceptRun(alphavalues + numbers + classMarker + idMarker + platformMaker + splitMaker)
 			l.emit(T_CMDPART)
 		} else if r == "," {
 			l.emit(T_COMMA)
 		} else {
+<<<<<<< HEAD
+=======
+			fmt.Println("Hello world!", r)
+>>>>>>> 0e83d21c43682e10fd195d42b3b943bd0e4a94cf
 			return l.errorf("Illegal character '%s'.", r)
 		}
 	}
@@ -232,6 +252,11 @@ func commandState(l *lexer) lexerState {
 	for r := l.next(); r != "}"; r = l.next() {
 		if r == " " || r == "\t" || r == "\r" {
 			l.ignore()
+		} else if r == "\"" {
+			l.ignore()
+			l.rejectRun("\"")
+			l.emit(T_CMDPART)
+			l.next()
 		} else if r == "\n" {
 			l.lineno += 1
 			l.emit(T_SEMI)
