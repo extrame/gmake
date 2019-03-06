@@ -101,7 +101,7 @@ func (p *parser) run() {
 
 // the starting state for parsing
 func initialParserState(p *parser) parserState {
-	for t := p.next(); t[0] != T_EOF; t = p.next() {
+	for t := p.next(); t != nil && t[0] != T_EOF; t = p.next() {
 		if t[0] == T_LITEM {
 			p.newDirective(t[1])
 			return itemState

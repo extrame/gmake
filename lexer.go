@@ -1,12 +1,12 @@
 package main
 
 import (
-	"fmt"
 	"strconv"
 	"strings"
 	"unicode/utf8"
+	"os"
 
-	"github.com/golang/glog"
+	"fmt"
 )
 
 // LexToken holds is a (type, value) array.
@@ -103,8 +103,9 @@ func (l *lexer) acceptRun(valid string) {
 func (l *lexer) errorf(format string, args ...interface{}) lexerState {
 	l.tokens = nil
 
-	args = []interface{}{l.lineno}
-	glog.Infof("gmake:%d: "+format+"\n", args...)
+	args = append([]interface{}{l.lineno},args...)
+
+	fmt.Fprintf(os.Stderr,"gmake:%d: "+format+"\n", args...)
 	return nil
 }
 
@@ -220,7 +221,6 @@ func dependencyLexerState(l *lexer) lexerState {
 		} else if r == "," {
 			l.emit(T_COMMA)
 		} else {
-			fmt.Println("Hello world!")
 			return l.errorf("Illegal character '%s'.", r)
 		}
 	}
