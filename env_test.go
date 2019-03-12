@@ -37,7 +37,7 @@ func TestEnvAppend(t *testing.T) {
 	ds.Exec(false)
 	setted := os.Getenv("GOPATH")
 	if setted == "D://test" {
-		t.Errorf("set env error not expected 'D://test' ", setted)
+		t.Error("set env error not expected 'D://test' ", setted)
 	}
 }
 
