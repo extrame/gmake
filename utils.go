@@ -5,11 +5,15 @@ import (
 	"strings"
 )
 
-func setEnv(name string, vals ...string) {
-	os.Setenv(name, strings.Join(vals, getEnvSeperator()))
+func setEnv(name string, vals ...string) string {
+	newEnv := strings.Join(vals, getEnvSeperator())
+	os.Setenv(name, newEnv)
+	return newEnv
 }
 
-func appendEnv(name string, vals ...string) {
+func appendEnv(name string, vals ...string) string {
 	oldEnv := os.Getenv(name)
-	os.Setenv(name, oldEnv+getEnvSeperator()+strings.Join(vals, getEnvSeperator()))
+	newEnv := oldEnv + getEnvSeperator() + strings.Join(vals, getEnvSeperator())
+	os.Setenv(name, newEnv)
+	return newEnv
 }

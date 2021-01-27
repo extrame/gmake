@@ -1,6 +1,10 @@
 package main
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/sirupsen/logrus"
+)
 
 // parserState represents the state of the scanner
 // as a function that returns the next state.
@@ -46,7 +50,7 @@ type parser struct {
 }
 
 func (p *parser) newDirective(name string) {
-	p.currentDirective = &Directive{Name: Item{Type: name}, Commands: make([]Command, 0), Serial: p.serial}
+	p.currentDirective = &Directive{Name: Item{Type: name}, Commands: make([]*Command, 0), Serial: p.serial}
 	p.serial++
 	// p.cmdparts = Command{Parts: make([]string, 0)}
 }
@@ -56,6 +60,7 @@ func (p *parser) closeDirective() {
 }
 
 func (p *parser) addCmdPart(part string) {
+	logrus.WithField("parts", part).Debugln("add cmd parts")
 	if p.cmdparts == nil {
 		p.cmdparts = &Command{Parts: make([]string, 0)}
 	}
@@ -64,7 +69,7 @@ func (p *parser) addCmdPart(part string) {
 
 func (p *parser) flushCommand() {
 	if p.cmdparts != nil {
-		p.currentDirective.Commands = append(p.currentDirective.Commands, *p.cmdparts)
+		p.currentDirective.Commands = append(p.currentDirective.Commands, p.cmdparts)
 		p.cmdparts = nil
 	}
 }
