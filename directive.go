@@ -4,6 +4,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 
 	"time"
@@ -11,14 +12,14 @@ import (
 	"sort"
 
 	"github.com/BurntSushi/toml"
-	"github.com/golang/glog"
+	glog "github.com/sirupsen/logrus"
 )
 
 type Directive struct {
 	Serial       int
 	Name         Item
 	Dependencies []string
-	Commands     []Command
+	Commands     []*Command
 }
 
 type Result struct {
@@ -26,15 +27,16 @@ type Result struct {
 	Result bool
 }
 
-func (d *Directive) Exec(doc *Doc, ctx *Context, parentChan chan Result, serialNo int) bool {
+// nodependencies: 0 - root and no skil 1 - root and skip 2 - n=not root and skip
+func (d *Directive) Exec(doc *Doc, ctx *Context, parentChan chan Result, serialNo int, nodependencies int) bool {
 	ctx.directivesInStack[d.Serial] = true
-	glog.Infoln("in", d.Name.String())
+	glog.Debugln("in", d.Name.String())
 	var signalNo = 0
 	//check Dependencies
 	hasDependency := false
 	var dependencies Doc
 	for _, dependency := range d.Dependencies {
-		glog.Infoln("go to dependency", dependency)
+		glog.Debugln("go to dependency", dependency)
 		selected := doc.Select(dependency)
 		for _, v := range selected {
 			if _, ok := ctx.directivesInStack[v.Serial]; !ok {
@@ -49,11 +51,15 @@ func (d *Directive) Exec(doc *Doc, ctx *Context, parentChan chan Result, serialN
 	for _, d := range dependencies {
 		hasDependency = true
 		//TODO this should be implented by chan
-		if d.Name.Type == "env" || d.Name.Type == "var" {
-			d.Exec(doc, ctx, execChan, signalNo)
+		// if d.Name.Type == "env" || d.Name.Type == "var" {
+		// 	d.Exec(doc, ctx, execChan, signalNo)
+		// } else {
+		if nodependencies > 0 {
+			d.Exec(doc, ctx, execChan, signalNo, notRootAndSkip)
 		} else {
-			d.Exec(doc, ctx, execChan, signalNo)
+			d.Exec(doc, ctx, execChan, signalNo, rootOrNoSkip)
 		}
+		// }
 		signalNo++
 	}
 	//waiting for dependencies
@@ -77,11 +83,11 @@ func (d *Directive) Exec(doc *Doc, ctx *Context, parentChan chan Result, serialN
 
 		resultCode := true
 		needWait := false
-		if exec == signalNo {
-			glog.Infoln("go to exec")
+		if exec == signalNo && nodependencies < notRootAndSkip {
+			glog.Debugln("go to exec")
 			resultCode, needWait = d.exec(ctx)
 		}
-		glog.Infof("[%s] %d %d", d.Name.String(), len(myCheckList), signalNo)
+		glog.Debugf("[%s] %d %d", d.Name.String(), len(myCheckList), signalNo)
 		if len(myCheckList) == signalNo {
 			parentChan <- Result{serialNo, resultCode}
 		}
@@ -97,7 +103,7 @@ func (d *Directive) Exec(doc *Doc, ctx *Context, parentChan chan Result, serialN
 		}
 	}
 	//
-	glog.Infoln("finish")
+	glog.Debugln("finish")
 	return true
 }
 
@@ -106,14 +112,20 @@ func (d *Directive) exec(ctx *Context) (bool, bool) {
 	case "env":
 		envs := make([]string, 0)
 		for _, c := range d.Commands {
-			envs = append(envs, ctx.replaceVar(c.Parts...)...)
+			_, args := ctx.replaceVar(c.Parts...)
+			envs = append(envs, args...)
 		}
+		var newEnv string
 		if d.Name.hasClass("append") {
-			appendEnv(d.Name.Id, envs...)
+			newEnv = appendEnv(d.Name.Id, envs...)
 		} else {
-			setEnv(d.Name.Id, envs...)
+			newEnv = setEnv(d.Name.Id, envs...)
 		}
-		glog.Infof("set env %s to %s\n", d.Name.Id, envs)
+		glog.
+			WithField("setted env", newEnv).
+			WithField("input env", envs).
+			WithField("name", d.Name.Id).
+			Infof("set env")
 	case "var":
 		if ctx.variables == nil {
 			ctx.variables = make(map[string]interface{})
@@ -136,24 +148,28 @@ func (d *Directive) exec(ctx *Context) (bool, bool) {
 	case "file":
 		glog.Infoln("watch file...")
 		for _, c := range d.Commands {
-			replacedParts := ctx.replaceVar(c.Parts...)
+			_, replacedParts := ctx.replaceVar(c.Parts...)
 			if isChanged := IsFileChanged(replacedParts[0]); isChanged {
 				return true, ctx.wait
 			}
 		}
 		return false, ctx.wait
 	default:
+		glog.Debugln("exec commands", d.Commands)
 		for _, c := range d.Commands {
-			replacedParts := ctx.replaceVar(c.Parts...)
+			dir, replacedParts := ctx.replaceVar(c.Parts...)
 			cm, parts := replacedParts[0], replacedParts[1:]
 			mustSuccess := true
-			if cm[0] == '-' {
+			if replacedParts[0][0] == '-' {
 				mustSuccess = false
 			}
 			glog.Infof("try to exec '%s'", strings.Join(replacedParts, " "))
 			cmd := exec.Command(cm, parts...)
 			cmd.Stderr = os.Stderr
 			cmd.Stdout = os.Stdout
+			if dir != "" {
+				cmd.Dir = filepath.Join(".", dir)
+			}
 			cmd.Stdin = os.Stdin
 			err := cmd.Run()
 			if err != nil && mustSuccess {

@@ -1,10 +1,10 @@
 package main
 
 import (
+	"os"
 	"strconv"
 	"strings"
 	"unicode/utf8"
-	"os"
 
 	"fmt"
 )
@@ -114,9 +114,9 @@ func (l *lexer) rejectRun(valid string) {
 func (l *lexer) errorf(format string, args ...interface{}) lexerState {
 	l.tokens = nil
 
-	args = append([]interface{}{l.lineno},args...)
+	args = append([]interface{}{l.lineno}, args...)
 
-	fmt.Fprintf(os.Stderr,"gmake:%d: "+format+"\n", args...)
+	fmt.Fprintf(os.Stderr, "gmake:%d: "+format+"\n", args...)
 	return nil
 }
 
@@ -240,8 +240,16 @@ func dependencyLexerState(l *lexer) lexerState {
 }
 
 func commandState(l *lexer) lexerState {
-	for r := l.next(); r != "}"; r = l.next() {
+	var lvl = 0
+	var hascompart = false
+	for r := l.next(); r != "}" || lvl > 0; r = l.next() {
 		if r == " " || r == "\t" || r == "\r" {
+			if hascompart && lvl == 0 {
+				l.backup()
+				l.emit(T_CMDPART)
+				l.next()
+			}
+			hascompart = false
 			l.ignore()
 		} else if r == "\"" {
 			l.ignore()
@@ -249,14 +257,29 @@ func commandState(l *lexer) lexerState {
 			l.emit(T_CMDPART)
 			l.next()
 		} else if r == "\n" {
+			if hascompart && lvl == 0 {
+				l.backup()
+				l.emit(T_CMDPART)
+				l.next()
+			}
+			hascompart = false
 			l.lineno += 1
 			l.emit(T_SEMI)
 		} else if r == EOF {
 			return l.errorf("Unclosed statement...")
+		} else if r == "{" {
+			lvl++
+		} else if r == "}" {
+			lvl--
 		} else {
 			l.acceptRun(`abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789~!@#$%^&*_+=-|\]['":/?.>,<`)
-			l.emit(T_CMDPART)
+			hascompart = true
 		}
+	}
+	if hascompart {
+		l.backup()
+		l.emit(T_CMDPART)
+		l.next()
 	}
 	l.emit(T_RCBRAC)
 	return initialLexerState

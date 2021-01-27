@@ -1,10 +1,12 @@
 package main
 
-import "flag"
-import "fmt"
-import "io/ioutil"
+import (
+	"flag"
+	"fmt"
+	"io/ioutil"
 
-import "github.com/golang/glog"
+	"github.com/sirupsen/logrus"
+)
 
 const (
 	help_text string = `
@@ -15,6 +17,11 @@ A very lightweight build tool.
 	--help		display this help and exit
 	--version	output version information and exit
 	--watch		watch the file
+	--verbose	set the log level
+		2 => ERROR(default)
+		3 => WARN
+		4 => INFO
+		5 => DEBUG
 	
 `
 	version_text = `
@@ -42,10 +49,14 @@ func main() {
 	// help := flag.Bool("help", false, help_text)
 	version := flag.Bool("version", false, version_text)
 	watch := flag.Bool("watch", false, "watch for file changes")
+	verbose := flag.Uint("verbose", 2, "open verbose log")
+	nodepenence := flag.Bool("nd", false, "not execute dependencies")
 	flag.Parse()
 
+	logrus.SetLevel(logrus.Level(*verbose))
+
 	if *version {
-		glog.Fatalln(version_text)
+		logrus.Fatalln(version_text)
 	} else {
 		// get contents
 		buf, err := ioutil.ReadFile("GMakefile")
@@ -60,10 +71,12 @@ func main() {
 
 		args := flag.Args()
 
+		logrus.WithField("skip-dependencies", *nodepenence).Infoln("start exec")
+
 		if len(args) == 0 {
-			AST.Exec(*watch)
+			AST.Exec(*watch, *nodepenence)
 		} else {
-			AST.Exec(*watch, args[0])
+			AST.Exec(*watch, *nodepenence, args[0])
 		}
 	}
 }
