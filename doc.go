@@ -49,6 +49,7 @@ func (g *Doc) Exec(waitingForWatch bool, nodependencies bool, selectors ...strin
 	logrus.Infof("selected (%d)", len(selected))
 	if len(selectors) > 0 && len(selected) == 0 {
 		fmt.Printf("selector %s doesn't existed\n", selectors[0])
+		os.Exit(0)
 	}
 	ctx := &Context{wait: waitingForWatch, directivesInStack: make(map[int]bool)}
 	var execChan = make(chan Result, len(selected))
