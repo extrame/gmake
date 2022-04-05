@@ -9,7 +9,7 @@ import (
 
 	"os"
 
-	"github.com/golang/glog"
+	"github.com/sirupsen/logrus"
 )
 
 type Environment struct {
@@ -22,7 +22,7 @@ func IsFileChanged(name string) bool {
 	var err error
 	defer func() {
 		if bts, err := json.Marshal(Env); err != nil {
-			glog.Fatalln(err)
+			logrus.Fatalln(err)
 		} else {
 			var out bytes.Buffer
 			json.Indent(&out, bts, "", "  ")
@@ -36,7 +36,7 @@ func IsFileChanged(name string) bool {
 		}
 	}
 	if err != nil {
-		glog.Warningln(err)
+		logrus.Warningln(err)
 		Env = new(Environment)
 		Env.FileTail = make(map[string]time.Time)
 	}
@@ -46,7 +46,7 @@ func IsFileChanged(name string) bool {
 		for _, v := range matches {
 			if fi, err := os.Stat(v); err == nil {
 				if oldMT, ok := Env.FileTail[v]; (ok && fi.ModTime().Sub(oldMT) > 0) || !ok {
-					glog.Infoln(v, "is changed")
+					logrus.Infoln(v, "is changed")
 					res = true
 				}
 				Env.FileTail[v] = fi.ModTime()

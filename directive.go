@@ -12,7 +12,7 @@ import (
 	"sort"
 
 	"github.com/BurntSushi/toml"
-	glog "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 )
 
 type Directive struct {
@@ -30,13 +30,13 @@ type Result struct {
 // nodependencies: 0 - root and no skil 1 - root and skip 2 - n=not root and skip
 func (d *Directive) Exec(doc *Doc, ctx *Context, parentChan chan Result, serialNo int, nodependencies int) bool {
 	ctx.directivesInStack[d.Serial] = true
-	glog.Debugln("in", d.Name.String())
+	logrus.Debugln("in", d.Name.String())
 	var signalNo = 0
 	//check Dependencies
 	hasDependency := false
 	var dependencies Doc
 	for _, dependency := range d.Dependencies {
-		glog.Debugln("go to dependency", dependency)
+		logrus.Debugln("go to dependency", dependency)
 		selected := doc.Select(dependency)
 		for _, v := range selected {
 			if _, ok := ctx.directivesInStack[v.Serial]; !ok {
@@ -68,10 +68,10 @@ func (d *Directive) Exec(doc *Doc, ctx *Context, parentChan chan Result, serialN
 	for {
 		exec := 0
 		if hasDependency {
-			glog.Infoln("waiting in", d.Name.String())
+			logrus.Infoln("waiting in", d.Name.String())
 			select {
 			case result := <-execChan:
-				glog.Infoln("waited for one signal in", d.Name.String())
+				logrus.Infoln("waited for one signal in", d.Name.String())
 				myCheckList[result.Serial] = result.Result
 				for _, v := range myCheckList {
 					if v {
@@ -84,10 +84,10 @@ func (d *Directive) Exec(doc *Doc, ctx *Context, parentChan chan Result, serialN
 		resultCode := true
 		needWait := false
 		if exec == signalNo && nodependencies < notRootAndSkip {
-			glog.Debugln("go to exec")
+			logrus.Debugln("go to exec")
 			resultCode, needWait = d.exec(ctx)
 		}
-		glog.Debugf("[%s] %d %d", d.Name.String(), len(myCheckList), signalNo)
+		logrus.Debugf("[%s] %d %d", d.Name.String(), len(myCheckList), signalNo)
 		if len(myCheckList) == signalNo {
 			parentChan <- Result{serialNo, resultCode}
 		}
@@ -95,7 +95,7 @@ func (d *Directive) Exec(doc *Doc, ctx *Context, parentChan chan Result, serialN
 			break
 		} else if !hasDependency {
 			if needWait {
-				glog.Infoln("sleep")
+				logrus.Infoln("sleep")
 				time.Sleep(time.Second)
 			} else {
 				break
@@ -103,7 +103,7 @@ func (d *Directive) Exec(doc *Doc, ctx *Context, parentChan chan Result, serialN
 		}
 	}
 	//
-	glog.Debugln("finish")
+	logrus.Debugln("finish")
 	return true
 }
 
@@ -121,7 +121,7 @@ func (d *Directive) exec(ctx *Context) (bool, bool) {
 		} else {
 			newEnv = setEnv(d.Name.Id, envs...)
 		}
-		glog.
+		logrus.
 			WithField("setted env", newEnv).
 			WithField("input env", envs).
 			WithField("name", d.Name.Id).
@@ -136,7 +136,7 @@ func (d *Directive) exec(ctx *Context) (bool, bool) {
 		}
 		_, err := toml.Decode(strings.Join(str, "\n"), &ctx.variables)
 		if err != nil {
-			glog.Fatalf("gmake: fatal: '%s'", err)
+			logrus.Fatalf("gmake: fatal: '%s'", err)
 		}
 	case "import":
 	//use go get to install the packages
@@ -146,7 +146,7 @@ func (d *Directive) exec(ctx *Context) (bool, bool) {
 	//(not else)if there is gmake in the package, trend it as package
 	//parse the gmake file in packages dir
 	case "file":
-		glog.Infoln("watch file...")
+		logrus.Infoln("watch file...")
 		for _, c := range d.Commands {
 			_, replacedParts := ctx.replaceVar(c.Parts...)
 			if isChanged := IsFileChanged(replacedParts[0]); isChanged {
@@ -155,7 +155,7 @@ func (d *Directive) exec(ctx *Context) (bool, bool) {
 		}
 		return false, ctx.wait
 	default:
-		glog.Debugln("exec commands", d.Commands)
+		logrus.Debugln("exec commands", d.Commands)
 		for _, c := range d.Commands {
 			dir, replacedParts := ctx.replaceVar(c.Parts...)
 			cm, parts := replacedParts[0], replacedParts[1:]
@@ -163,7 +163,7 @@ func (d *Directive) exec(ctx *Context) (bool, bool) {
 			if replacedParts[0][0] == '-' {
 				mustSuccess = false
 			}
-			glog.Infof("try to exec '%s'", strings.Join(replacedParts, " "))
+			logrus.Infof("try to exec '%s'", strings.Join(replacedParts, " "))
 			cmd := exec.Command(cm, parts...)
 			cmd.Stderr = os.Stderr
 			cmd.Stdout = os.Stdout
@@ -175,7 +175,7 @@ func (d *Directive) exec(ctx *Context) (bool, bool) {
 			if err != nil && mustSuccess {
 				log.Fatalf("gmake: fatal: '%s'", err)
 			}
-			glog.Infoln("exec success")
+			logrus.Infoln("exec success")
 		}
 	}
 	return true, false

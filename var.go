@@ -4,13 +4,13 @@ import (
 	"os"
 	"strings"
 
-	"github.com/golang/glog"
+	"github.com/sirupsen/logrus"
 )
 
 func getCurrentDirectory() string {
 	dir, err := os.Getwd()
 	if err != nil {
-		glog.Fatalln(err)
+		logrus.Fatalln(err)
 	}
 	return strings.Replace(dir, "\\", "/", -1)
 }
