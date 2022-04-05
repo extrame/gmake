@@ -12,7 +12,7 @@ type parserState func(*parser) parserState
 
 // Parse creates a new parser with the recommended
 // parameters.
-func Parse(name string, ctx *lang.Context, tokens []LexToken) Doc {
+func Parse(name string, tokens []LexToken) Doc {
 	p := &parser{
 		name:   name,
 		tokens: tokens,

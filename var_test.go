@@ -10,7 +10,7 @@ func Test_getCurrentDirectory(t *testing.T) {
 		name string
 		want string
 	}{
-	// TODO: Add test cases.
+		// TODO: Add test cases.
 	}
 	fmt.Println("--------")
 	fmt.Println(getCurrentDirectory())
