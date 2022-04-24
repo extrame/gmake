@@ -3,18 +3,29 @@ package main
 import (
 	"fmt"
 	"os"
+	"os/exec"
+	"strings"
+	"time"
 
 	"github.com/sirupsen/logrus"
 )
 
 type Context struct {
-	variables         map[string]interface{}
+	Variables map[string]interface{}
+	FileTail  map[string]time.Time `json:"file_tail"`
+	//variables got from cache file
+	oldVariables      map[string]interface{}
 	wait              bool
 	directivesInStack map[int]bool
 }
 
+func (ctx *Context) markVariableStatus() {
+	ctx.cache()
+}
+
 func (ctx *Context) replaceVar(origin ...string) (dir string, res []string) {
 	res = make([]string, 0)
+	var cmd []string
 	for i := 0; i < len(origin); i++ {
 		var word = origin[i]
 		switch word {
@@ -32,14 +43,34 @@ func (ctx *Context) replaceVar(origin ...string) (dir string, res []string) {
 		case "$currentDir":
 			res = append(res, getCurrentDirectory())
 		default:
-			res = append(res, os.Expand(word, func(key string) string {
-				if v, ok := ctx.variables[key]; ok {
-					return fmt.Sprintf("%s", v)
-				} else {
-					return os.Getenv(key)
+			explained := os.Expand(word, ctx.expend)
+			if cmd != nil && strings.HasSuffix(explained, ")") {
+				//in execute
+				cmd = append(cmd, explained[:len(explained)-1])
+				var c = exec.Command(cmd[0], cmd[1:]...)
+				bts, err := c.Output()
+				if err != nil {
+					logrus.Fatalln(err)
 				}
-			}))
+				res = append(res, string(bts))
+				cmd = nil
+			} else if cmd != nil {
+				cmd = append(cmd, explained)
+			} else if strings.HasPrefix(explained, "$(") {
+				//in execute
+				cmd = []string{explained[2:]}
+			} else {
+				res = append(res, explained)
+			}
 		}
 	}
 	return
+}
+
+func (ctx *Context) expend(key string) string {
+	if v, ok := ctx.Variables[key]; ok {
+		return fmt.Sprintf("%s", v)
+	} else {
+		return os.Getenv(key)
+	}
 }

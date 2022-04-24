@@ -3,8 +3,6 @@ module github.com/extrame/gmake
 go 1.18
 
 require (
-	github.com/BurntSushi/toml v1.1.0
-	github.com/extrame/goblet v0.0.0-20220418080733-2f8f7266e3e9
 	github.com/sirupsen/logrus v1.8.1
 )
 

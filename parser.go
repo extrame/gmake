@@ -23,7 +23,7 @@ func Parse(name string, tokens []LexToken) Doc {
 	return p.ast
 }
 
-func ParseItem(name string, tokens []LexToken) Item {
+func ParseItem(name string, tokens []LexToken) *Item {
 	p := &parser{
 		name:   name,
 		tokens: tokens,
@@ -50,7 +50,7 @@ type parser struct {
 }
 
 func (p *parser) newDirective(name string) {
-	p.currentDirective = &Directive{Name: Item{Type: name}, Commands: make([]*Command, 0), Serial: p.serial}
+	p.currentDirective = &Directive{Name: &Item{Type: name}, Commands: make([]*Command, 0), Serial: p.serial}
 	p.serial++
 	// p.cmdparts = Command{Parts: make([]string, 0)}
 }
@@ -145,7 +145,7 @@ func commandsState(p *parser) parserState {
 }
 
 func itemState(p *parser) parserState {
-
+	var editedCondition *condition
 	for t := p.next(); t[0] != T_RITEM; t = p.next() {
 		switch t[0] {
 		case T_LCLASS:
@@ -156,6 +156,22 @@ func itemState(p *parser) parserState {
 				return nil
 			}
 			p.currentDirective.Name.Id = t[1]
+		case T_LCONDITION:
+			if editedCondition != nil {
+				logrus.Fatal("aleady in condition", editedCondition.name)
+			}
+			var c = condition{
+				name: t[1],
+				typ:  "variable",
+			}
+			editedCondition = &c
+			p.currentDirective.Name.Conditions = append(p.currentDirective.Name.Conditions, editedCondition)
+		case T_LPSEUDO:
+			if editedCondition != nil {
+				editedCondition.pseudo = append(editedCondition.pseudo, t[1])
+			} else {
+				logrus.Fatal("not in condition,please used like '$variable:updated'", editedCondition.name)
+			}
 		case T_EOF:
 			return nil
 		case T_LITEM:

@@ -41,18 +41,19 @@ func (g Doc) Swap(a, b int) {
 
 //Exec execute the Doc file
 func (g *Doc) Exec(waitingForWatch bool, nodependencies bool, selectors ...string) {
-	selectStr := ".main"
+	selectStr := ""
 	if len(selectors) > 0 {
 		selectStr = selectors[0]
 	}
 	logrus.Infoln("try to execute by selector", selectors)
 	selected := g.Select(selectStr)
-	logrus.Infof("selected (%d)", len(selected))
+	logrus.Debugf("selected (%d)", len(selected))
 	if len(selectors) > 0 && len(selected) == 0 {
 		fmt.Printf("selector %s doesn't existed\n", selectors[0])
 		os.Exit(0)
 	}
 	ctx := &Context{wait: waitingForWatch, directivesInStack: make(map[int]bool)}
+	ctx.load()
 	var execChan = make(chan Result, len(selected))
 	signalNo := 0
 	for _, dir := range selected {
@@ -78,11 +79,14 @@ func (g *Doc) Exec(waitingForWatch bool, nodependencies bool, selectors ...strin
 }
 
 func (g *Doc) Select(selector string) Doc {
+	if selector == "" {
+		return Doc{(*g)[len(*g)-1]}
+	}
 	s := Selector(selector)
 	return g.selectByItem(s)
 }
 
-func (g *Doc) selectByItem(selectItem Item) Doc {
+func (g *Doc) selectByItem(selectItem *Item) Doc {
 	d := make(Doc, 0)
 	logrus.Infoln("selected by selector", selectItem)
 	for _, item := range *g {

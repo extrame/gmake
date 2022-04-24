@@ -11,15 +11,26 @@ import (
 
 	"sort"
 
-	"github.com/BurntSushi/toml"
 	"github.com/sirupsen/logrus"
+	"gopkg.in/yaml.v3"
 )
 
 type Directive struct {
 	Serial       int
-	Name         Item
+	Name         *Item
 	Dependencies []string
 	Commands     []*Command
+}
+
+func (d *Directive) shouldJumpOver(ctx *Context) bool {
+	if len(d.Name.Conditions) > 0 {
+		for _, cond := range d.Name.Conditions {
+			if cond.isNotAlready(ctx) {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 type Result struct {
@@ -40,6 +51,7 @@ func (d *Directive) Exec(doc *Doc, ctx *Context, parentChan chan Result, serialN
 		selected := doc.Select(dependency)
 		for _, v := range selected {
 			if _, ok := ctx.directivesInStack[v.Serial]; !ok {
+				//not in stack already
 				dependencies = append(dependencies, v)
 			}
 		}
@@ -85,7 +97,19 @@ func (d *Directive) Exec(doc *Doc, ctx *Context, parentChan chan Result, serialN
 		needWait := false
 		if exec == signalNo && nodependencies < notRootAndSkip {
 			logrus.Debugln("go to exec")
-			resultCode, needWait = d.exec(ctx)
+			var err error
+			if d.shouldJumpOver(ctx) {
+				logrus.WithField("name", d.Name).Infoln("condition not fill, jump over")
+				resultCode = true
+				needWait = false
+				err = nil
+			} else {
+				resultCode, needWait, err = d.exec(ctx)
+			}
+
+			if err != nil {
+				logrus.Fatal("exec error", err)
+			}
 		}
 		logrus.Debugf("[%s] %d %d", d.Name.String(), len(myCheckList), signalNo)
 		if len(myCheckList) == signalNo {
@@ -107,37 +131,75 @@ func (d *Directive) Exec(doc *Doc, ctx *Context, parentChan chan Result, serialN
 	return true
 }
 
-func (d *Directive) exec(ctx *Context) (bool, bool) {
+//exec the command
+//return values
+// successed
+// needWait
+// err: error
+func (d *Directive) exec(ctx *Context) (successed bool, needWait bool, err error) {
 	switch d.Name.Type {
 	case "env":
-		envs := make([]string, 0)
-		for _, c := range d.Commands {
-			_, args := ctx.replaceVar(c.Parts...)
-			envs = append(envs, args...)
-		}
-		var newEnv string
-		if d.Name.hasClass("append") {
-			newEnv = appendEnv(d.Name.Id, envs...)
+
+		if d.Name.Id != "" {
+			envs := make([]string, 0)
+			//set name in title
+			for _, c := range d.Commands {
+				_, args := ctx.replaceVar(c.Parts...)
+				envs = append(envs, args...)
+			}
+			var newEnv string
+			if d.Name.hasClass("append") {
+				newEnv = appendEnv(d.Name.Id, envs...)
+			} else {
+				newEnv = setEnv(d.Name.Id, envs...)
+			}
+			logrus.
+				WithField("setted env", newEnv).
+				WithField("input env", envs).
+				WithField("name", d.Name.Id).
+				Infof("set env")
 		} else {
-			newEnv = setEnv(d.Name.Id, envs...)
+			//set name as yaml
+			envs := make(map[string]string)
+			str := make([]string, len(d.Commands))
+			for n, c := range d.Commands {
+				_, env := ctx.replaceVar(c.Parts...)
+				str[n] += strings.Join(env, " ")
+			}
+			err = yaml.Unmarshal([]byte(strings.Join(str, "\n")), &envs)
+			if err == nil {
+				var newEnv string
+				for k, env := range envs {
+					if d.Name.hasClass("append") {
+						newEnv = appendEnv(k, env)
+					} else {
+						newEnv = setEnv(k, env)
+					}
+					logrus.
+						WithField("setted env", newEnv).
+						WithField("input env", envs).
+						WithField("name", k).
+						Infof("set env")
+				}
+			} else {
+				return
+			}
 		}
-		logrus.
-			WithField("setted env", newEnv).
-			WithField("input env", envs).
-			WithField("name", d.Name.Id).
-			Infof("set env")
+
 	case "var":
-		if ctx.variables == nil {
-			ctx.variables = make(map[string]interface{})
+		if ctx.Variables == nil {
+			ctx.Variables = make(map[string]interface{})
 		}
 		str := make([]string, len(d.Commands))
 		for n, c := range d.Commands {
-			str[n] += strings.Join(c.Parts, " ")
+			_, vars := ctx.replaceVar(c.Parts...)
+			str[n] += strings.Join(vars, " ")
 		}
-		_, err := toml.Decode(strings.Join(str, "\n"), &ctx.variables)
+		err = yaml.Unmarshal([]byte(strings.Join(str, "\n")), &ctx.Variables)
 		if err != nil {
-			logrus.Fatalf("gmake: fatal: '%s'", err)
+			return
 		}
+		ctx.markVariableStatus()
 	case "import":
 	//use go get to install the packages
 
@@ -146,14 +208,16 @@ func (d *Directive) exec(ctx *Context) (bool, bool) {
 	//(not else)if there is gmake in the package, trend it as package
 	//parse the gmake file in packages dir
 	case "file":
-		logrus.Infoln("watch file...")
-		for _, c := range d.Commands {
-			_, replacedParts := ctx.replaceVar(c.Parts...)
-			if isChanged := IsFileChanged(replacedParts[0]); isChanged {
-				return true, ctx.wait
-			}
-		}
-		return false, ctx.wait
+		// needWait = ctx.wait
+		// logrus.Infoln("watch file...")
+		// for _, c := range d.Commands {
+		// 	_, replacedParts := ctx.replaceVar(c.Parts...)
+		// 	if isChanged := ctx.IsFileChanged(replacedParts[0]); isChanged {
+		// 		successed = true
+		// 		return
+		// 	}
+		// }
+		// return
 	default:
 		logrus.Debugln("exec commands", d.Commands)
 		for _, c := range d.Commands {
@@ -178,5 +242,6 @@ func (d *Directive) exec(ctx *Context) (bool, bool) {
 			logrus.Infoln("exec success")
 		}
 	}
-	return true, false
+	successed = true
+	return
 }

@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"os/exec"
 	"testing"
 )
 
@@ -26,8 +27,8 @@ func Test_getCurrentDirectory(t *testing.T) {
 func TestVar(t *testing.T) {
 	_, tokens := Lexer("GMAKE", `
 		var.deploy {
-			test="git.oschina.net/mink-tech/bible"
-			test2="23"
+			test: git.oschina.net/mink-tech/bible
+			test2: 23
 		}
         deploy.main(
             .deploy
@@ -36,5 +37,28 @@ func TestVar(t *testing.T) {
 		}
     `)
 	ds := Parse("GMAKE", tokens)
-	ds.Exec(false)
+	ds.Exec(false, false, "")
+}
+
+func TestVarUpdated(t *testing.T) {
+	_, tokens := Lexer("GMAKE", `
+		var.deploy {
+			test: git.oschina.net/mink-tech/bible
+			test2: $(dir .)
+		}
+        deploy.main$test2:updated (
+            .deploy
+        ){
+			go get $test
+		}
+    `)
+	ds := Parse("GMAKE", tokens)
+	ds.Exec(false, false, "")
+}
+
+func TestExecLs(t *testing.T) {
+	var cmd = exec.Command("dir", ".")
+	fmt.Println(cmd.Env)
+	bts, err := cmd.Output()
+	fmt.Println(string(bts), err)
 }

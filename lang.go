@@ -23,12 +23,21 @@ const T_CLASS_MARK string = "T_CLASS_MARK"
 const T_LID string = "T_LID"
 const T_ID_MARK string = "T_ID_MARK"
 
+const T_LPSEUDO = "T_LPSEUDO"
+const T_PSEUDO_MARK string = "T_PSEUDO_MARK"
+
+const T_CONDITION_MARK = "T_CONDITION_MARK"
+const T_LCONDITION = "T_LCONDITION"
+
 const alphavalues = `abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ`
 const numbers = `0123456789`
+const splitMaker = "_"
+
+//marker for css names
 const classMarker = "."
 const idMarker = "#"
-const platformMaker = "@"
-const splitMaker = "_"
+const conditionMaker = "$"
+const pseudoMaker = ":"
 
 // asts
 

@@ -18,7 +18,7 @@ func TestDoc_Exec(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tt.g.Exec(false, tt.args.selectors...)
+			tt.g.Exec(false, false, tt.args.selectors...)
 		})
 	}
 }
@@ -58,7 +58,7 @@ func TestDoc_selectByItem(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := tt.g.selectByItem(tt.args.selectItem); !reflect.DeepEqual(got, tt.want) {
+			if got := tt.g.selectByItem(&tt.args.selectItem); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("Doc.selectByItem() = %v, want %v", got, tt.want)
 			}
 		})

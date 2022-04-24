@@ -49,14 +49,14 @@ func main() {
 	// help := flag.Bool("help", false, help_text)
 	version := flag.Bool("version", false, version_text)
 	watch := flag.Bool("watch", false, "watch for file changes")
-	verbose := flag.Uint("verbose", 2, "open verbose log")
+	verbose := flag.Uint("verbose", 2, "open verbose log,2: error,3: warning, 4: info, 5: debug")
 	nodepenence := flag.Bool("nd", false, "not execute dependencies")
 	flag.Parse()
 
 	logrus.SetLevel(logrus.Level(*verbose))
 
 	if *version {
-		logrus.Fatalln(version_text)
+		logrus.Fatal(version_text)
 	} else {
 		// get contents
 		buf, err := ioutil.ReadFile("GMakefile")

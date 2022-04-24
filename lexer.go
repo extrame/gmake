@@ -136,7 +136,7 @@ func (l *lexer) Run() {
 
 // isName() checks if a character is an alpha
 func isName(char string) bool {
-	testStr := alphavalues + classMarker + idMarker + platformMaker + splitMaker
+	testStr := alphavalues + classMarker + idMarker + conditionMaker + splitMaker
 	if strings.Index(testStr, char) >= 0 {
 		return true
 	} else {
@@ -162,8 +162,12 @@ func itemLexerState(l *lexer) lexerState {
 			l.ignore()
 		} else if r == "." {
 			l.emit(T_CLASS_MARK)
-		} else if r == "#" {
+		} else if r == idMarker {
 			l.emit(T_ID_MARK)
+		} else if r == conditionMaker {
+			l.emit(T_CONDITION_MARK)
+		} else if r == pseudoMaker {
+			l.emit(T_PSEUDO_MARK)
 		} else if isCharacter(r) {
 			l.acceptRun(alphavalues + numbers + splitMaker)
 			if len(l.tokens) >= 1 {
@@ -172,6 +176,10 @@ func itemLexerState(l *lexer) lexerState {
 					l.emit(T_LCLASS)
 				case T_ID_MARK:
 					l.emit(T_LID)
+				case T_CONDITION_MARK:
+					l.emit(T_LCONDITION)
+				case T_PSEUDO_MARK:
+					l.emit(T_LPSEUDO)
 				default:
 					l.emit(T_LITEM)
 				}
@@ -227,7 +235,7 @@ func dependencyLexerState(l *lexer) lexerState {
 		} else if r == EOF {
 			return l.errorf("Unclosed dependancy switch...")
 		} else if isName(r) {
-			l.acceptRun(alphavalues + numbers + classMarker + idMarker + platformMaker + splitMaker)
+			l.acceptRun(alphavalues + numbers + classMarker + idMarker + conditionMaker + splitMaker)
 			l.emit(T_CMDPART)
 		} else if r == "," {
 			l.emit(T_COMMA)
