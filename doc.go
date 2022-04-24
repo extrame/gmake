@@ -79,7 +79,7 @@ func (g *Doc) Exec(waitingForWatch bool, nodependencies bool, selectors ...strin
 }
 
 func (g *Doc) Select(selector string) Doc {
-	if selector == "" {
+	if selector == "" && len(*g) > 0 {
 		return Doc{(*g)[len(*g)-1]}
 	}
 	s := Selector(selector)

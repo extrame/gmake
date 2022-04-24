@@ -16,7 +16,6 @@ A very lightweight build tool.
 
 	--help		display this help and exit
 	--version	output version information and exit
-	--watch		watch the file
 	--verbose	set the log level
 		2 => ERROR(default)
 		3 => WARN
@@ -25,9 +24,9 @@ A very lightweight build tool.
 	
 `
 	version_text = `
-    gmake (aisola/gmake) 0.1
+    gmake (extrame/gmake) 0.2.1
 
-    Copyright (C) 2014-2017 Abram C. Isola && Liu Ming
+    Copyright (C) 2014-2022 Abram C. Isola && Liu Ming
     This program comes with ABSOLUTELY NO WARRANTY; for details see
     LICENSE. This is free software, and you are welcome to redistribute 
     it under certain conditions in LICENSE.
@@ -48,7 +47,7 @@ func combiner(strs []string) string {
 func main() {
 	// help := flag.Bool("help", false, help_text)
 	version := flag.Bool("version", false, version_text)
-	watch := flag.Bool("watch", false, "watch for file changes")
+	watch := flag.Bool("watch", false, "watch for file changes (not enabled until now)")
 	verbose := flag.Uint("verbose", 2, "open verbose log,2: error,3: warning, 4: info, 5: debug")
 	nodepenence := flag.Bool("nd", false, "not execute dependencies")
 	flag.Parse()
