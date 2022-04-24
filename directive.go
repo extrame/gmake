@@ -11,6 +11,7 @@ import (
 
 	"sort"
 
+	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
 )
@@ -108,7 +109,7 @@ func (d *Directive) Exec(doc *Doc, ctx *Context, parentChan chan Result, serialN
 			}
 
 			if err != nil {
-				logrus.Fatal("exec error", err)
+				logrus.WithError(err).Fatal("exec error")
 			}
 		}
 		logrus.Debugf("[%s] %d %d", d.Name.String(), len(myCheckList), signalNo)
@@ -166,7 +167,8 @@ func (d *Directive) exec(ctx *Context) (successed bool, needWait bool, err error
 				_, env := ctx.replaceVar(c.Parts...)
 				str[n] += strings.Join(env, " ")
 			}
-			err = yaml.Unmarshal([]byte(strings.Join(str, "\n")), &envs)
+			var fullStr = strings.Join(str, "\n")
+			err = yaml.Unmarshal([]byte(fullStr), &envs)
 			if err == nil {
 				var newEnv string
 				for k, env := range envs {
@@ -182,6 +184,7 @@ func (d *Directive) exec(ctx *Context) (successed bool, needWait bool, err error
 						Infof("set env")
 				}
 			} else {
+				err = errors.Wrap(err, "in parse:"+fullStr)
 				return
 			}
 		}
@@ -195,8 +198,10 @@ func (d *Directive) exec(ctx *Context) (successed bool, needWait bool, err error
 			_, vars := ctx.replaceVar(c.Parts...)
 			str[n] += strings.Join(vars, " ")
 		}
-		err = yaml.Unmarshal([]byte(strings.Join(str, "\n")), &ctx.Variables)
+		var fullStr = strings.Join(str, "\n")
+		err = yaml.Unmarshal([]byte(fullStr), &ctx.Variables)
 		if err != nil {
+			err = errors.Wrap(err, "in parse:"+fullStr)
 			return
 		}
 		ctx.markVariableStatus()

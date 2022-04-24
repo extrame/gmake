@@ -1,12 +1,6 @@
-a.deploy {
-    echo 1
-}
-b.deploy {
-    echo 2
-}
-file.deploy {
-    version
+var.deploy {
+    git: $(git describe --tags)
 }
 c.deploy (.deploy){
-    echo 3
+    dir .
 }
