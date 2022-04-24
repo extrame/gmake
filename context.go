@@ -50,9 +50,10 @@ func (ctx *Context) replaceVar(origin ...string) (dir string, res []string) {
 				var c = exec.Command(cmd[0], cmd[1:]...)
 				bts, err := c.Output()
 				if err != nil {
-					logrus.Fatalln(err)
+					logrus.WithField("execution", "get string from sub command").Error(err)
+				} else {
+					res = append(res, string(bts))
 				}
-				res = append(res, string(bts))
 				cmd = nil
 			} else if cmd != nil {
 				cmd = append(cmd, explained)
