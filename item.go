@@ -32,7 +32,7 @@ type condition struct {
 func (c *condition) String() string {
 	var str string
 	for _, v := range c.pseudo {
-		str += "$" + c.name + ":" + v
+		str += "@" + c.name + ":" + v
 	}
 	return str
 }

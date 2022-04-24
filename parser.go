@@ -170,7 +170,7 @@ func itemState(p *parser) parserState {
 			if editedCondition != nil {
 				editedCondition.pseudo = append(editedCondition.pseudo, t[1])
 			} else {
-				logrus.Fatal("not in condition,please used like '$variable:updated'", editedCondition.name)
+				logrus.Fatal("not in condition,please used like '@variable:updated'", editedCondition.name)
 			}
 		case T_EOF:
 			return nil

@@ -1,6 +1,6 @@
 var.deploy {
     git: $(git describe --tags)
 }
-c.deploy (.deploy){
+c.deploy@git:updated (.deploy){
     dir .
 }

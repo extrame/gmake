@@ -36,7 +36,7 @@ const splitMaker = "_"
 //marker for css names
 const classMarker = "."
 const idMarker = "#"
-const conditionMaker = "$"
+const conditionMaker = "@"
 const pseudoMaker = ":"
 
 // asts

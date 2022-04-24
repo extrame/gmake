@@ -46,7 +46,7 @@ func TestVarUpdated(t *testing.T) {
 			test: git.oschina.net/mink-tech/bible
 			test2: $(dir .)
 		}
-        deploy.main$test2:updated (
+        deploy.main@test2:updated (
             .deploy
         ){
 			go get $test
