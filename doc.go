@@ -22,11 +22,13 @@ func (g Doc) Len() int {
 func (g Doc) Less(a int, b int) bool {
 	first := g[a]
 	second := g[b]
-	if first.Name.Type == "env" {
+	if first.Name.Type == "var" {
 		return true
-	} else if first.Name.Type == "var" {
-		if second.Name.Type == "env" {
-			return false
+	} else if second.Name.Type == "var" {
+		return false
+	} else if first.Name.Type == "env" {
+		if second.Name.Type != "var" {
+			return true
 		}
 	}
 	return false
