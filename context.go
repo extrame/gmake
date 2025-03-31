@@ -50,7 +50,7 @@ func (ctx *Context) replaceVar(origin ...string) (dir string, res []string) {
 				var c = exec.Command(cmd[0], cmd[1:]...)
 				bts, err := c.Output()
 				if err != nil {
-					logrus.WithField("execution", "get string from sub command").Error(err)
+					logrus.WithField("execution", strings.Join(cmd, " ")).WithError(err).Error("failed to execute sub command")
 				} else {
 					logrus.WithField("result", string(bts)).Info("get result from sub command")
 					res = append(res, string(bts))
