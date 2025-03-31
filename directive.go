@@ -132,8 +132,8 @@ func (d *Directive) Exec(doc *Doc, ctx *Context, parentChan chan Result, serialN
 	return true
 }
 
-//exec the command
-//return values
+// exec the command
+// return values
 // successed
 // needWait
 // err: error
@@ -231,6 +231,12 @@ func (d *Directive) exec(ctx *Context) (successed bool, needWait bool, err error
 			mustSuccess := true
 			if replacedParts[0][0] == '-' {
 				mustSuccess = false
+				if replacedParts[0] == "-" {
+					cm = replacedParts[1]
+					parts = replacedParts[2:]
+				} else {
+					cm = replacedParts[0][1:]
+				}
 			}
 			logrus.Infof("try to exec '%s'", strings.Join(replacedParts, " "))
 			cmd := exec.Command(cm, parts...)
