@@ -1,7 +1,6 @@
 package main
 
 import (
-	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -248,7 +247,7 @@ func (d *Directive) exec(ctx *Context) (successed bool, needWait bool, err error
 			cmd.Stdin = os.Stdin
 			err := cmd.Run()
 			if err != nil && mustSuccess {
-				log.Fatalf("gmake: fatal: '%s'", err)
+				logrus.WithField("cmd", strings.Join(replacedParts, " ")).WithError(err).Errorln("exec failed")
 			}
 			logrus.Infoln("exec success")
 		}
