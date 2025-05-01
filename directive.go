@@ -139,7 +139,6 @@ func (d *Directive) Exec(doc *Doc, ctx *Context, parentChan chan Result, serialN
 func (d *Directive) exec(ctx *Context) (successed bool, needWait bool, err error) {
 	switch d.Name.Type {
 	case "env":
-
 		if d.Name.Id != "" {
 			envs := make([]string, 0)
 			//set name in title
@@ -248,6 +247,7 @@ func (d *Directive) exec(ctx *Context) (successed bool, needWait bool, err error
 			err := cmd.Run()
 			if err != nil && mustSuccess {
 				logrus.WithField("cmd", strings.Join(replacedParts, " ")).WithError(err).Errorln("exec failed")
+				return false, needWait, err
 			}
 			logrus.Infoln("exec success")
 		}
