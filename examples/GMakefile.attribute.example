@@ -1,0 +1,57 @@
+# GMakefile 属性选择器示例
+# 这个文件展示了如何使用 [for=target] 这样的属性选择器语法
+
+# 基本属性选择器示例
+deploy[for=production] {
+    echo "部署到生产环境"
+    # 这里可以添加实际的部署命令
+}
+
+deploy[for=staging] {
+    echo "部署到预发布环境"
+    # 这里可以添加实际的部署命令
+}
+
+# 属性选择器与类选择器组合使用
+build.production[platform=linux] {
+    echo "为Linux平台构建生产版本"
+    # 构建命令
+}
+
+build.staging[platform=linux] {
+    echo "为Linux平台构建测试版本"
+    # 构建命令
+}
+
+build.production[platform=windows] {
+    echo "为Windows平台构建生产版本"
+    # 构建命令
+}
+
+# 属性选择器与ID选择器组合使用
+test#unit[scope=fast] {
+    echo "运行快速单元测试"
+    # 测试命令
+}
+
+test#integration[scope=slow] {
+    echo "运行集成测试"
+    # 测试命令
+}
+
+# 多个属性组合
+deploy[for=production][region=us-east] {
+    echo "部署到美国东部生产环境"
+    # 部署命令
+}
+
+deploy[for=production][region=eu-west] {
+    echo "部署到欧洲西部生产环境"
+    # 部署命令
+}
+
+# 使用示例说明
+# 1. 运行特定环境的部署: gmake [for=production]
+# 2. 运行特定平台的构建: gmake [platform=linux]
+# 3. 组合选择器: gmake .production[platform=linux]
+# 4. 组合选择器: gmake #unit[scope=fast]

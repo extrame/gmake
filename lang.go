@@ -29,6 +29,12 @@ const T_PSEUDO_MARK string = "T_PSEUDO_MARK"
 const T_CONDITION_MARK = "T_CONDITION_MARK"
 const T_LCONDITION = "T_LCONDITION"
 
+// 新增属性选择器相关token
+const T_LATTRIBUTE = "T_LATTRIBUTE"
+const T_ATTRIBUTE_MARK = "T_ATTRIBUTE_MARK"
+const T_ATTRIBUTE_EQUAL = "T_ATTRIBUTE_EQUAL"
+const T_RATTRIBUTE = "T_RATTRIBUTE"
+
 const alphavalues = `abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ`
 const numbers = `0123456789`
 const splitMaker = "_"
@@ -38,6 +44,11 @@ const classMarker = "."
 const idMarker = "#"
 const conditionMaker = "@"
 const pseudoMaker = ":"
+
+// 新增属性选择器标记
+const attributeMarker = "["
+const attributeEqual = "="
+const attributeEndMarker = "]"
 
 // asts
 

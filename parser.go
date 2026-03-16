@@ -146,6 +146,7 @@ func commandsState(p *parser) parserState {
 
 func itemState(p *parser) parserState {
 	var editedCondition *condition
+	var editedAttribute *attribute // 新增属性编辑状态
 	for t := p.next(); t[0] != T_RITEM; t = p.next() {
 		switch t[0] {
 		case T_LCLASS:
@@ -172,10 +173,34 @@ func itemState(p *parser) parserState {
 			} else {
 				logrus.Fatal("not in condition,please used like '@variable:updated'", editedCondition.name)
 			}
+		case T_ATTRIBUTE_MARK: // 开始属性解析
+			if editedAttribute != nil {
+				logrus.Fatal("already in attribute", editedAttribute.name)
+			}
+			editedAttribute = &attribute{}
+		case T_LATTRIBUTE: // 属性名称
+			if editedAttribute != nil {
+				editedAttribute.name = t[1]
+			} else {
+				logrus.Fatal("not in attribute context")
+			}
+		case T_ATTRIBUTE_EQUAL: // 属性等号
+			// 等待属性值
+		case T_RATTRIBUTE: // 属性结束
+			if editedAttribute != nil && editedAttribute.name != "" {
+				p.currentDirective.Name.Attributes = append(p.currentDirective.Name.Attributes, editedAttribute)
+				editedAttribute = nil
+			} else {
+				logrus.Fatal("invalid attribute syntax")
+			}
+		case T_LITEM: // 属性值（在等号之后）或指令名称
+			if editedAttribute != nil && editedAttribute.name != "" && editedAttribute.value == "" {
+				editedAttribute.value = t[1]
+			} else {
+				p.newDirective(t[1])
+			}
 		case T_EOF:
 			return nil
-		case T_LITEM:
-			p.newDirective(t[1])
 		}
 	}
 	return initialParserState

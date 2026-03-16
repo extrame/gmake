@@ -1,0 +1,1 @@
+test { echo "Hello from GMakefile" }

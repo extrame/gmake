@@ -1,2 +1,3 @@
 vendor/
 .gmake
+pkg/mod/cache/download/cloud.google.com/go/@v/list

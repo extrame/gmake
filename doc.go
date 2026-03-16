@@ -111,6 +111,17 @@ func (g *Doc) selectByItem(selectItem *Item) Doc {
 			continue
 		}
 		logrus.Debug("|same class")
+		// 新增属性选择器检查
+		var attrTestLength = len(selectItem.Attributes)
+		for _, attr := range selectItem.Attributes {
+			if item.Name.hasAttribute(attr.name, attr.value) {
+				attrTestLength--
+			}
+		}
+		if attrTestLength > 0 {
+			continue
+		}
+		logrus.Debug("|same attributes")
 		d = append(d, item)
 	}
 	return d

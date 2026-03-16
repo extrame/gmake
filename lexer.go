@@ -100,7 +100,6 @@ func (l *lexer) acceptRun(valid string) {
 // Run consumes a run of runes from the invalid set.
 func (l *lexer) rejectRun(valid string) {
 	for c := l.next(); strings.Index(valid, c) < 0; c = l.next() {
-		fmt.Print(c)
 		if c == EOF {
 			os.Exit(1)
 		}
@@ -136,7 +135,7 @@ func (l *lexer) Run() {
 
 // isName() checks if a character is an alpha
 func isName(char string) bool {
-	testStr := alphavalues + classMarker + idMarker + conditionMaker + splitMaker
+	testStr := alphavalues + classMarker + idMarker + conditionMaker + splitMaker + attributeMarker + attributeEqual + attributeEndMarker
 	if strings.Index(testStr, char) >= 0 {
 		return true
 	} else {
@@ -168,6 +167,12 @@ func itemLexerState(l *lexer) lexerState {
 			l.emit(T_CONDITION_MARK)
 		} else if r == pseudoMaker {
 			l.emit(T_PSEUDO_MARK)
+		} else if r == attributeMarker { // 新增属性选择器开始标记
+			l.emit(T_ATTRIBUTE_MARK)
+		} else if r == attributeEqual { // 属性等号
+			l.emit(T_ATTRIBUTE_EQUAL)
+		} else if r == attributeEndMarker { // 属性结束标记
+			l.emit(T_RATTRIBUTE)
 		} else if isCharacter(r) {
 			l.acceptRun(alphavalues + numbers + splitMaker)
 			if len(l.tokens) >= 1 {
@@ -180,6 +185,10 @@ func itemLexerState(l *lexer) lexerState {
 					l.emit(T_LCONDITION)
 				case T_PSEUDO_MARK:
 					l.emit(T_LPSEUDO)
+				case T_ATTRIBUTE_MARK: // 属性名称
+					l.emit(T_LATTRIBUTE)
+				case T_ATTRIBUTE_EQUAL: // 属性值
+					l.emit(T_LITEM)
 				default:
 					l.emit(T_LITEM)
 				}

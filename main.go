@@ -3,7 +3,8 @@ package main
 import (
 	"flag"
 	"fmt"
-	"io/ioutil"
+	"os"
+	"path/filepath"
 
 	"github.com/sirupsen/logrus"
 )
@@ -43,6 +44,24 @@ func combiner(strs []string) string {
 	return fullstr
 }
 
+// findGMakefile 递归向上查找GMakefile文件
+func findGMakefile(dir string) (string, error) {
+	// 检查当前目录是否存在GMakefile
+	filePath := filepath.Join(dir, "GMakefile")
+	if _, err := os.Stat(filePath); err == nil {
+		return dir, nil
+	}
+
+	// 检查父目录
+	parentDir := filepath.Dir(dir)
+	if parentDir == dir { // 已经到达根目录
+		return "", fmt.Errorf("GMakefile not found")
+	}
+
+	// 递归查找父目录
+	return findGMakefile(parentDir)
+}
+
 // Starts processing
 func main() {
 	// help := flag.Bool("help", false, help_text)
@@ -57,8 +76,28 @@ func main() {
 	if *version {
 		logrus.Fatal(version_text)
 	} else {
-		// get contents
-		buf, err := ioutil.ReadFile("GMakefile")
+		// 获取当前目录
+		currentDir, err := os.Getwd()
+		if err != nil {
+			fmt.Println("gmake: fatal: could not get current directory")
+			return
+		}
+
+		// 查找GMakefile文件
+		gmakeDir, err := findGMakefile(currentDir)
+		if err != nil {
+			fmt.Println("gmake: fatal: could not find GMakefile")
+			return
+		}
+
+		// 切换到找到GMakefile的目录
+		if err := os.Chdir(gmakeDir); err != nil {
+			fmt.Println("gmake: fatal: could not change directory")
+			return
+		}
+
+		// 读取GMakefile文件
+		buf, err := os.ReadFile("GMakefile")
 		if err != nil {
 			fmt.Println("gmake: fatal: could not read GMakefile")
 			return

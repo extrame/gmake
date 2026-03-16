@@ -5,7 +5,8 @@ type Item struct {
 	Type       string
 	Conditions []*condition
 	// PSEUDOS    []string
-	Classes []string
+	Classes    []string
+	Attributes []*attribute // 新增属性支持
 }
 
 func (i *Item) String() string {
@@ -17,6 +18,9 @@ func (i *Item) String() string {
 		str += "." + v
 	}
 	for _, v := range i.Conditions {
+		str += v.String()
+	}
+	for _, v := range i.Attributes {
 		str += v.String()
 	}
 	return str
@@ -37,6 +41,16 @@ func (c *condition) String() string {
 	return str
 }
 
+// 新增属性类型
+type attribute struct {
+	name  string
+	value string
+}
+
+func (a *attribute) String() string {
+	return "[" + a.name + "=" + a.value + "]"
+}
+
 func (c *condition) isNotAlready(ctx *Context) bool {
 	if c.typ == "variable" {
 		for _, p := range c.pseudo {
@@ -53,6 +67,16 @@ func (c *condition) isNotAlready(ctx *Context) bool {
 func (i *Item) hasClass(name string) bool {
 	for _, cls := range i.Classes {
 		if cls == name {
+			return true
+		}
+	}
+	return false
+}
+
+// 新增属性检查方法
+func (i *Item) hasAttribute(name, value string) bool {
+	for _, attr := range i.Attributes {
+		if attr.name == name && attr.value == value {
 			return true
 		}
 	}
