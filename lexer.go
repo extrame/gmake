@@ -21,12 +21,6 @@ type lexerState func(*lexer) lexerState
 
 // Lexer creates a new scanner for the input string.
 func Lexer(name, input string, initialState ...lexerState) (*lexer, []LexToken) {
-	return lex(name, input, true, initialState...)
-}
-
-// lex 与 Lexer 相同，但可以控制是否把行首的 # 当作行注释。
-// 选择器本身允许以 # 开头（ID 选择器），解析选择器时需要关闭该规则。
-func lex(name, input string, stripLineComments bool, initialState ...lexerState) (*lexer, []LexToken) {
 	l := &lexer{
 		name:   name,
 		input:  input,
@@ -38,20 +32,17 @@ func lex(name, input string, stripLineComments bool, initialState ...lexerState)
 	} else {
 		l.initialState = initialLexerState
 	}
-	if !l.stripComments(stripLineComments) {
+	if !l.stripComments() {
 		return l, l.tokens
 	}
 	l.Run()
 	return l, l.tokens
 }
 
-// stripComments 在扫描前移除 GMakefile 中的注释，支持两种写法：
-//   - 块注释：/* ... */，可以跨行，也可以出现在选择器或命令中间
-//   - 行注释：以 # 开头（允许前置空白）的整行注释
-//
-// 双引号字符串中的注释标记会原样保留；被移除的注释中的换行会被保留，
-// 以便 token 行号仍然准确。
-func (l *lexer) stripComments(stripLineComments bool) bool {
+// stripComments 在扫描前移除 GMakefile 中的块注释 /* ... */。
+// 块注释可以跨行，也可以出现在选择器或命令中间；双引号字符串中的
+// 注释标记会原样保留，被移除的注释中的换行会被保留，以便 token 行号仍然准确。
+func (l *lexer) stripComments() bool {
 	input := l.input
 	var b strings.Builder
 	b.Grow(len(input))
@@ -59,7 +50,6 @@ func (l *lexer) stripComments(stripLineComments bool) bool {
 	var (
 		inBlock     bool
 		inQuote     bool
-		atLineStart = true
 		blockLine   = 1
 		line        = 1
 	)
@@ -74,7 +64,6 @@ func (l *lexer) stripComments(stripLineComments bool) bool {
 			} else if c == '\n' {
 				b.WriteByte(c)
 				line++
-				atLineStart = true
 			}
 			continue
 		}
@@ -87,21 +76,6 @@ func (l *lexer) stripComments(stripLineComments bool) bool {
 				inQuote = false
 			}
 			continue
-		}
-
-		if atLineStart {
-			if c == ' ' || c == '\t' || c == '\r' {
-				b.WriteByte(c)
-				continue
-			}
-			if stripLineComments && c == '#' {
-				// 跳过整行，保留行尾换行由后续循环处理
-				for i+1 < len(input) && input[i+1] != '\n' {
-					i++
-				}
-				continue
-			}
-			atLineStart = false
 		}
 
 		switch {
@@ -118,7 +92,6 @@ func (l *lexer) stripComments(stripLineComments bool) bool {
 			b.WriteByte(c)
 			if c == '\n' {
 				line++
-				atLineStart = true
 			}
 		}
 	}
@@ -312,6 +285,9 @@ func initialLexerState(l *lexer) lexerState {
 		} else if r == "\n" {
 			l.lineno += 1
 			l.ignore()
+		} else if r == idMarker {
+			// '#' 行注释只在依赖括号内有效，指令前/行首的 '#' 不再被忽略
+			return l.errorf("Illegal character '#': '#' comment is only allowed inside dependency parentheses.")
 		} else if isName(r) {
 			l.backup()
 			return itemLexerState
@@ -339,6 +315,23 @@ func dependencyLexerState(l *lexer) lexerState {
 			l.emit(T_COMMA)
 		} else if r == EOF {
 			return l.errorf("Unclosed dependancy switch...")
+		} else if r == idMarker {
+			// 依赖括号内支持 # 行注释；'#名字' 不是合法依赖写法，要求 # 后为空白或行尾
+			next := l.peek()
+			if next != " " && next != "\t" && next != "\r" && next != "\n" && next != EOF {
+				return l.errorf("Illegal character '#': '#' comment must be followed by whitespace.")
+			}
+			for {
+				c := l.next()
+				if c == "\n" {
+					l.lineno += 1
+					l.emit(T_COMMA)
+					break
+				}
+				if c == EOF {
+					break
+				}
+			}
 		} else if isName(r) {
 			l.acceptRun(alphavalues + numbers + classMarker + idMarker + conditionMaker + splitMaker + nameSeparator)
 			l.emit(T_CMDPART)

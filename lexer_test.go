@@ -453,28 +453,70 @@ func TestBlockCommentInSelector(t *testing.T) {
 	}
 }
 
-func TestLineComment(t *testing.T) {
-	_, tokens := Lexer("GMAKE", `
-		# 顶层注释
-		build#main {
-			# 命令块中的注释
-			echo hi
-		}
-		# 结尾注释
-	`)
+func TestLineCommentRejectedOutsideDependency(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+	}{
+		{
+			name:  "指令前",
+			input: "\n# 顶层说明\nbuild#main {\n\techo hi\n}\n",
+		},
+		{
+			name:  "文件末尾",
+			input: "build#main {\n\techo hi\n}\n# 结尾注释\n",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// 行首（允许前置空白）的 # 不再是注释，应当报错而不是被静默吞掉
+			_, tokens := Lexer("GMAKE", tt.input)
+			if tokens != nil {
+				t.Errorf("'#' outside dependency parentheses should fail the scan, got %v", tokens)
+			}
+		})
+	}
+}
+
+func TestLineCommentInCommandBlockIsCommand(t *testing.T) {
+	// 命令块内的 # 行也不剥离，# 不是注释而是命令内容；gmake 不经过 shell，
+	// 这条命令执行时会失败，但不会被静默忽略。
+	_, tokens := Lexer("GMAKE", "build#main {\n\t# 命令块说明\n\techo hi\n}\n")
 	ds := Parse("GMAKE", tokens)
 	if len(ds) != 1 {
 		t.Fatalf("wrong directive number, expected 1 but got %d", len(ds))
 	}
-	// 行内的 # 仍然是 ID 选择器，而不是注释
-	if ds[0].Name.Id != "main" {
-		t.Errorf("wrong directive id, expected 'main' but got '%s'", ds[0].Name.Id)
+	if len(ds[0].Commands) != 2 {
+		t.Fatalf("expected the '#' line to stay as a command, got %d commands", len(ds[0].Commands))
 	}
-	if len(ds[0].Commands) != 1 {
-		t.Fatalf("wrong command number, expected 1 but got %d", len(ds[0].Commands))
+	if ds[0].Commands[0].Parts[0] != "#" {
+		t.Errorf("expected first command to start with '#', got %v", ds[0].Commands[0].Parts)
 	}
-	if !reflect.DeepEqual(ds[0].Commands[0].Parts, []string{"echo", "hi"}) {
-		t.Errorf("wrong command, got %v", ds[0].Commands[0].Parts)
+}
+
+func TestDependencyComment(t *testing.T) {
+	_, tokens := Lexer("GMAKE", `
+		deploy {
+			echo deploy
+		}
+		lint {
+			echo lint
+		}
+		all (
+			.deploy, # 先部署
+			# 整行注释
+			lint
+		) {
+			echo all
+		}
+	`)
+	ds := Parse("GMAKE", tokens)
+	if len(ds) != 3 {
+		t.Fatalf("wrong directive number, expected 3 but got %d", len(ds))
+	}
+	want := []string{".deploy", "lint"}
+	if !reflect.DeepEqual(ds[2].Dependencies, want) {
+		t.Errorf("wrong dependencies, expected %v but got %v", want, ds[2].Dependencies)
 	}
 }
 
