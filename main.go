@@ -26,9 +26,9 @@ A very lightweight build tool.
 	
 `
 	version_text = `
-    gmake (extrame/gmake) 0.3.0
+    gmake (extrame/gmake) 0.3.1
 
-    Copyright (C) 2014-2022 Abram C. Isola && Liu Ming
+    Copyright (C) 2014-2026 Abram C. Isola && Liu Ming
     This program comes with ABSOLUTELY NO WARRANTY; for details see
     LICENSE. This is free software, and you are welcome to redistribute 
     it under certain conditions in LICENSE.
@@ -93,7 +93,8 @@ func main() {
 	logrus.SetLevel(logrus.Level(*verbose))
 
 	if *version {
-		logrus.Fatal(version_text)
+		// 版本信息属于正常输出：走 stdout，退出码 0，不写 stderr
+		fmt.Print(version_text)
 	} else {
 		// 获取当前目录
 		currentDir, err := os.Getwd()
