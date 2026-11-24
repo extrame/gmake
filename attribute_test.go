@@ -124,8 +124,10 @@ func TestExampleFileAttributeSelector(t *testing.T) {
 	t.Run("BasicAttributeSelectors", func(t *testing.T) {
 		// 测试 [for=production]
 		selected := ds.Select("[for=production]")
-		if len(selected) != 2 { // 应该匹配 deploy[for=production] 和 deploy[for=production][region=us-east]
-			t.Errorf("expected 2 directives for [for=production], got %d", len(selected))
+		// 应该匹配 deploy[for=production]、deploy[for=production][region=us-east]
+		// 和 deploy[for=production][region=eu-west] 共 3 条
+		if len(selected) != 3 {
+			t.Errorf("expected 3 directives for [for=production], got %d", len(selected))
 		}
 
 		// 测试 [for=staging]
