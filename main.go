@@ -26,7 +26,7 @@ A very lightweight build tool.
 	
 `
 	version_text = `
-    gmake (extrame/gmake) 0.2.1
+    gmake (extrame/gmake) 0.3.0
 
     Copyright (C) 2014-2022 Abram C. Isola && Liu Ming
     This program comes with ABSOLUTELY NO WARRANTY; for details see
@@ -86,6 +86,8 @@ func main() {
 	watch := flag.Bool("watch", false, "watch for file changes (not enabled until now)")
 	verbose := flag.Uint("verbose", 2, "open verbose log,2: error,3: warning, 4: info, 5: debug")
 	nodepenence := flag.Bool("nd", false, "not execute dependencies")
+	list := flag.Bool("list", false, "list all targets without executing any command")
+	listJSON := flag.Bool("json", false, "print the target list as JSON (use with --list)")
 	flag.Parse()
 
 	logrus.SetLevel(logrus.Level(*verbose))
@@ -127,6 +129,19 @@ func main() {
 		// scan then parse
 		_, tokens := Lexer("GMAKE", string(buf))
 		AST = Parse("GMAKE", tokens)
+
+		// --list 只读：只输出已解析的目标，不执行命令、不展开依赖
+		if *list {
+			out := buildList(gmakeFile, AST)
+			if *listJSON {
+				if err := printListJSON(os.Stdout, out); err != nil {
+					fmt.Fprintf(os.Stderr, "gmake: fatal: could not output json: %v\n", err)
+				}
+			} else {
+				printListText(os.Stdout, out)
+			}
+			return
+		}
 
 		args := flag.Args()
 
