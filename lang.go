@@ -38,6 +38,7 @@ const T_RATTRIBUTE = "T_RATTRIBUTE"
 const alphavalues = `abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ`
 const numbers = `0123456789`
 const splitMaker = "_"
+const nameSeparator = "-"
 
 //marker for css names
 const classMarker = "."

@@ -270,7 +270,7 @@ func itemLexerState(l *lexer) lexerState {
 		} else if r == attributeEndMarker { // 属性结束标记
 			l.emit(T_RATTRIBUTE)
 		} else if isCharacter(r) {
-			l.acceptRun(alphavalues + numbers + splitMaker)
+			l.acceptRun(alphavalues + numbers + splitMaker + nameSeparator)
 			if len(l.tokens) >= 1 {
 				switch l.tokens[len(l.tokens)-1][0] {
 				case T_CLASS_MARK:
@@ -340,7 +340,7 @@ func dependencyLexerState(l *lexer) lexerState {
 		} else if r == EOF {
 			return l.errorf("Unclosed dependancy switch...")
 		} else if isName(r) {
-			l.acceptRun(alphavalues + numbers + classMarker + idMarker + conditionMaker + splitMaker)
+			l.acceptRun(alphavalues + numbers + classMarker + idMarker + conditionMaker + splitMaker + nameSeparator)
 			l.emit(T_CMDPART)
 		} else if r == "," {
 			l.emit(T_COMMA)
