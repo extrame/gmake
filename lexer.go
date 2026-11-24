@@ -21,6 +21,12 @@ type lexerState func(*lexer) lexerState
 
 // Lexer creates a new scanner for the input string.
 func Lexer(name, input string, initialState ...lexerState) (*lexer, []LexToken) {
+	return lex(name, input, true, initialState...)
+}
+
+// lex 与 Lexer 相同，但可以控制是否把行首的 # 当作行注释。
+// 选择器本身允许以 # 开头（ID 选择器），解析选择器时需要关闭该规则。
+func lex(name, input string, stripLineComments bool, initialState ...lexerState) (*lexer, []LexToken) {
 	l := &lexer{
 		name:   name,
 		input:  input,
@@ -32,8 +38,98 @@ func Lexer(name, input string, initialState ...lexerState) (*lexer, []LexToken) 
 	} else {
 		l.initialState = initialLexerState
 	}
+	if !l.stripComments(stripLineComments) {
+		return l, l.tokens
+	}
 	l.Run()
 	return l, l.tokens
+}
+
+// stripComments 在扫描前移除 GMakefile 中的注释，支持两种写法：
+//   - 块注释：/* ... */，可以跨行，也可以出现在选择器或命令中间
+//   - 行注释：以 # 开头（允许前置空白）的整行注释
+//
+// 双引号字符串中的注释标记会原样保留；被移除的注释中的换行会被保留，
+// 以便 token 行号仍然准确。
+func (l *lexer) stripComments(stripLineComments bool) bool {
+	input := l.input
+	var b strings.Builder
+	b.Grow(len(input))
+
+	var (
+		inBlock     bool
+		inQuote     bool
+		atLineStart = true
+		blockLine   = 1
+		line        = 1
+	)
+
+	for i := 0; i < len(input); i++ {
+		c := input[i]
+
+		if inBlock {
+			if c == '*' && i+1 < len(input) && input[i+1] == '/' {
+				inBlock = false
+				i++
+			} else if c == '\n' {
+				b.WriteByte(c)
+				line++
+				atLineStart = true
+			}
+			continue
+		}
+
+		if inQuote {
+			b.WriteByte(c)
+			if c == '\n' {
+				line++
+			} else if c == '"' {
+				inQuote = false
+			}
+			continue
+		}
+
+		if atLineStart {
+			if c == ' ' || c == '\t' || c == '\r' {
+				b.WriteByte(c)
+				continue
+			}
+			if stripLineComments && c == '#' {
+				// 跳过整行，保留行尾换行由后续循环处理
+				for i+1 < len(input) && input[i+1] != '\n' {
+					i++
+				}
+				continue
+			}
+			atLineStart = false
+		}
+
+		switch {
+		case c == '"':
+			inQuote = true
+			b.WriteByte(c)
+		case c == '/' && i+1 < len(input) && input[i+1] == '*':
+			// 用空格代替注释起始标记，避免把前后内容拼接成一个词
+			inBlock = true
+			blockLine = line
+			b.WriteByte(' ')
+			i++
+		default:
+			b.WriteByte(c)
+			if c == '\n' {
+				line++
+				atLineStart = true
+			}
+		}
+	}
+
+	if inBlock {
+		l.lineno = blockLine
+		l.errorf("Unclosed comment...")
+		return false
+	}
+	l.input = b.String()
+	return true
 }
 
 // lexer holds the state of the scanner.

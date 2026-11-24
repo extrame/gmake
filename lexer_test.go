@@ -114,7 +114,7 @@ func TestLexer(t *testing.T) {
 		want  *lexer
 		want1 []LexToken
 	}{
-	// TODO: Add test cases.
+		// TODO: Add test cases.
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -134,7 +134,7 @@ func Test_lexer_ignore(t *testing.T) {
 		name string
 		l    *lexer
 	}{
-	// TODO: Add test cases.
+		// TODO: Add test cases.
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -148,7 +148,7 @@ func Test_lexer_backup(t *testing.T) {
 		name string
 		l    *lexer
 	}{
-	// TODO: Add test cases.
+		// TODO: Add test cases.
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -163,7 +163,7 @@ func Test_lexer_next(t *testing.T) {
 		l    *lexer
 		want string
 	}{
-	// TODO: Add test cases.
+		// TODO: Add test cases.
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -180,7 +180,7 @@ func Test_lexer_peek(t *testing.T) {
 		l    *lexer
 		want string
 	}{
-	// TODO: Add test cases.
+		// TODO: Add test cases.
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -201,7 +201,7 @@ func Test_lexer_accept(t *testing.T) {
 		args args
 		want bool
 	}{
-	// TODO: Add test cases.
+		// TODO: Add test cases.
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -221,7 +221,7 @@ func Test_lexer_acceptRun(t *testing.T) {
 		l    *lexer
 		args args
 	}{
-	// TODO: Add test cases.
+		// TODO: Add test cases.
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -241,7 +241,7 @@ func Test_lexer_errorf(t *testing.T) {
 		args args
 		want lexerState
 	}{
-	// TODO: Add test cases.
+		// TODO: Add test cases.
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -261,7 +261,7 @@ func Test_lexer_emit(t *testing.T) {
 		l    *lexer
 		args args
 	}{
-	// TODO: Add test cases.
+		// TODO: Add test cases.
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -275,7 +275,7 @@ func Test_lexer_Run(t *testing.T) {
 		name string
 		l    *lexer
 	}{
-	// TODO: Add test cases.
+		// TODO: Add test cases.
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -293,7 +293,7 @@ func Test_isName(t *testing.T) {
 		args args
 		want bool
 	}{
-	// TODO: Add test cases.
+		// TODO: Add test cases.
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -313,7 +313,7 @@ func Test_isCharacter(t *testing.T) {
 		args args
 		want bool
 	}{
-	// TODO: Add test cases.
+		// TODO: Add test cases.
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -333,7 +333,7 @@ func Test_itemLexerState(t *testing.T) {
 		args args
 		want lexerState
 	}{
-	// TODO: Add test cases.
+		// TODO: Add test cases.
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -353,7 +353,7 @@ func Test_initialLexerState(t *testing.T) {
 		args args
 		want lexerState
 	}{
-	// TODO: Add test cases.
+		// TODO: Add test cases.
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -373,7 +373,7 @@ func Test_dependencyLexerState(t *testing.T) {
 		args args
 		want lexerState
 	}{
-	// TODO: Add test cases.
+		// TODO: Add test cases.
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -393,7 +393,7 @@ func Test_commandState(t *testing.T) {
 		args args
 		want lexerState
 	}{
-	// TODO: Add test cases.
+		// TODO: Add test cases.
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -401,5 +401,114 @@ func Test_commandState(t *testing.T) {
 				t.Errorf("commandState() = %v, want %v", got, tt.want)
 			}
 		})
+	}
+}
+
+func TestBlockComment(t *testing.T) {
+	_, tokens := Lexer("GMAKE", `
+		/* 文件头注释
+		   可以跨越多行 */
+		build.deploy {
+			echo build /* 行尾注释 */
+			/* 命令块中的整行注释 */
+			echo done
+		}
+		clean {
+			echo clean
+		}
+	`)
+	ds := Parse("GMAKE", tokens)
+	if len(ds) != 2 {
+		t.Fatalf("wrong directive number, expected 2 but got %d", len(ds))
+	}
+	if ds[0].Name.Type != "build" || !ds[0].Name.hasClass("deploy") {
+		t.Errorf("wrong first directive name, got '%s'", ds[0].Name.String())
+	}
+	if len(ds[0].Commands) != 2 {
+		t.Fatalf("wrong command number, expected 2 but got %d", len(ds[0].Commands))
+	}
+	if !reflect.DeepEqual(ds[0].Commands[0].Parts, []string{"echo", "build"}) {
+		t.Errorf("wrong first command, got %v", ds[0].Commands[0].Parts)
+	}
+	if !reflect.DeepEqual(ds[0].Commands[1].Parts, []string{"echo", "done"}) {
+		t.Errorf("wrong second command, got %v", ds[0].Commands[1].Parts)
+	}
+	if ds[1].Name.Type != "clean" {
+		t.Errorf("wrong second directive name, got '%s'", ds[1].Name.String())
+	}
+}
+
+func TestBlockCommentInSelector(t *testing.T) {
+	_, tokens := Lexer("GMAKE", `
+		deploy/* 选择器中的注释 */.main {
+			echo hi
+		}
+	`)
+	ds := Parse("GMAKE", tokens)
+	if len(ds) != 1 {
+		t.Fatalf("wrong directive number, expected 1 but got %d", len(ds))
+	}
+	if ds[0].Name.Type != "deploy" || !ds[0].Name.hasClass("main") {
+		t.Errorf("wrong directive name, got '%s'", ds[0].Name.String())
+	}
+}
+
+func TestLineComment(t *testing.T) {
+	_, tokens := Lexer("GMAKE", `
+		# 顶层注释
+		build#main {
+			# 命令块中的注释
+			echo hi
+		}
+		# 结尾注释
+	`)
+	ds := Parse("GMAKE", tokens)
+	if len(ds) != 1 {
+		t.Fatalf("wrong directive number, expected 1 but got %d", len(ds))
+	}
+	// 行内的 # 仍然是 ID 选择器，而不是注释
+	if ds[0].Name.Id != "main" {
+		t.Errorf("wrong directive id, expected 'main' but got '%s'", ds[0].Name.Id)
+	}
+	if len(ds[0].Commands) != 1 {
+		t.Fatalf("wrong command number, expected 1 but got %d", len(ds[0].Commands))
+	}
+	if !reflect.DeepEqual(ds[0].Commands[0].Parts, []string{"echo", "hi"}) {
+		t.Errorf("wrong command, got %v", ds[0].Commands[0].Parts)
+	}
+}
+
+func TestCommentMarkerInQuotes(t *testing.T) {
+	_, tokens := Lexer("GMAKE", `
+		all {
+			echo "/* not a comment */"
+		}
+	`)
+	ds := Parse("GMAKE", tokens)
+	if len(ds) != 1 || len(ds[0].Commands) != 1 {
+		t.Fatalf("wrong parse result, got %d directives", len(ds))
+	}
+	if !reflect.DeepEqual(ds[0].Commands[0].Parts, []string{"echo", "/* not a comment */"}) {
+		t.Errorf("quoted comment marker should be kept, got %v", ds[0].Commands[0].Parts)
+	}
+}
+
+func TestCommentKeepsLineNumbers(t *testing.T) {
+	_, tokens := Lexer("GMAKE", "/* 注释一\n   注释二 */\nbuild {\n}\n")
+	for _, token := range tokens {
+		if token[0] == T_LITEM {
+			if token[2] != "3" {
+				t.Errorf("wrong line number, expected '3' but got '%s'", token[2])
+			}
+			return
+		}
+	}
+	t.Error("directive name token not found")
+}
+
+func TestUnterminatedBlockComment(t *testing.T) {
+	_, tokens := Lexer("GMAKE", "all {\n\techo hi\n}\n/* 没有结束")
+	if tokens != nil {
+		t.Errorf("unclosed comment should fail the scan, got %v", tokens)
 	}
 }
