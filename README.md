@@ -1,99 +1,267 @@
 GMake (1.0)
 ===========
 
-A very lightweight build utility written in Go. 
+一个用 Go 编写的轻量级构建工具。它读取项目中的 `GMakefile`，按其中以「类 CSS 选择器」
+语法定义的指令执行命令，用于管理项目的构建、测试、清理等任务。
 
-## Install
+## 安装
 
     $ go install github.com/extrame/gmake@latest
 
-## Getting Started
+在仓库内本地构建：
 
-### Basic Usage
+    $ go build -o gmake .
 
-In any project, create a file `gmakefile` and use the following syntax to create rules:
+## 快速开始
 
-    target {
-        command
-    }
-
-A more realistic example is shown below compiling a go program:
+在项目根目录创建 `GMakefile`（文件名区分大小写），定义一个指令：
 
     all {
-        go build -o hello main.go;
+        go build -o hello main.go
     }
-    
+
+执行：
+
+    $ gmake all
+
+`gmake` 会从当前目录开始向上查找 `GMakefile`，找到后切换到该文件所在目录执行。
+
+### 命中的配置文件
+
+每次执行都会把**实际命中的配置文件绝对路径**输出到 stderr，例如：
+
+    $ gmake all
+    gmake: using /home/me/project/GMakefile
+    ...
+
+这是判断「这次执行到底读了哪个文件」的唯一依据：向上查找时，离当前目录最近的
+`GMakefile` 优先命中，子目录里的同名文件会遮蔽父目录的那个。
+
+- **默认开启**，没有关闭开关，也不受 `--verbose`（只影响日志级别）或 `-nd`（只影响依赖）影响。
+- 输出到 **stderr**，不会混进任务命令的 stdout，被其他脚本消费的输出不受污染。
+- 在大小写不敏感的文件系统（如 macOS 默认的 APFS）上，会按磁盘上的**真实文件名**显示，
+  因此 `Gmakefile` 和 `GMakefile` 能被区分出来。
+
+### 执行规则
+
+- 不带参数：执行文件中**最后一个**指令。
+- 第一个参数是选择器：执行所有匹配的指令，多个匹配项按它们在 `GMakefile` 中出现的顺序执行。
+- 选择器之后的参数是指令参数，可在命令中用 `$@`、`$1` 等占位符引用（见「7. 指令参数」）。
+
+## 写法参考
+
+### 1. 指令（target）
+
+指令由「名称 + 可选的类 / ID / 属性 + 命令块」组成，与 CSS 选择器一致：
+
+    build {                          # 纯名称
+        go build ./...
+    }
+
+    build.deploy {                   # 类选择器
+        echo deploying
+    }
+
+    build#main {                     # ID 选择器
+        echo main
+    }
+
+    build[platform=linux] {          # 属性选择器
+        echo linux build
+    }
+
+    build.production#main[platform=linux][arch=amd64] {   # 组合写法
+        echo combined
+    }
+
+命名限制：
+
+- 名称、类名、ID、属性名、属性值只允许字母、数字、`_`、`-`，且**必须以字母开头**；
+  属性值以数字开头时值会丢失，导致属性选择器失效。
+- 一个指令最多一个 ID，ID 重复会报错。
+
+### 2. 命令
+
+命令块内**每行一条命令**：
+
+    all {
+        go build -o hello main.go
+        echo done
+    }
+
+注意事项：
+
+- **不要写分号**。分号不是命令分隔符，而是会被拼进命令的最后一个参数，导致执行失败。
+- **注释**：支持 `/* ... */` 块注释（可跨行，也可写在选择器或命令中间）和整行 `#` 注释；
+  `#` 只有在行首（允许前置空白）时才是注释，`build#main` 里的 `#` 仍是 ID 选择器。
+  双引号字符串内的内容不会被当作注释。
+- gmake **不经过 shell**：管道 `|`、重定向 `>`、`&&`、通配符展开等都不会生效，
+  这些字符会原样作为参数传给命令。
+- 唯一的语法特例是切换目录：`cd 目录 && 命令`，gmake 会把后续命令的工作目录切到该目录。
+- 命令前加 `-` 表示该命令失败也不中断，继续执行后面的命令：
+
+    all {
+        -rm -rf dist
+        mkdir dist
+    }
+
+- `$currentDir` 替换为 `GMakefile` 所在目录的绝对路径。
+- `$变量名` 替换为 `var` 指令中定义的值；未定义时回退到同名环境变量。
+
+### 3. 依赖
+
+在指令名后用括号声明依赖，括号内写任意选择器：
+
+    a.deploy { echo A }
+    b.deploy { echo B }
+    c (.deploy) { echo C }
+
+`gmake c` 会先执行所有匹配 `.deploy` 的指令（a、b，按文件中的先后顺序），再执行 c。
+
+多个依赖用逗号或换行分隔：
+
+    lint {
+        go vet ./...
+    }
+
+    c (.deploy, lint) {
+        echo C
+    }
+
+- 依赖先于当前指令执行，当前指令等待所有依赖完成后再执行。
+- 同一指令只应通过一条依赖路径引入：多个依赖选择器同时匹配到同一指令时，可能被重复执行。
+- `gmake -nd c` 跳过所有依赖，只执行 c 本身。
+
+### 4. 变量（var）
+
+`var` 指令用 YAML 语法定义变量，通过类 / ID 供其他指令依赖：
+
+    var.deploy {
+        version: 1.0.0
+        registry: git.example.com/demo
+    }
+
+    all.deploy (.deploy) {
+        echo $version $registry
+    }
+
+- 变量的值里可以引用 `$currentDir` 和其他已定义变量。
+- 变量会缓存到 `.gmake` 文件，用于判断变量是否发生变化。
+
+#### 条件：变量更新时才执行
+
+    all.deploy@version:updated (.deploy) {
+        echo "version changed"
+    }
+
+`@变量名:updated` 表示仅当该变量相对上次运行（`.gmake` 缓存）发生变化时才执行该指令。
+
+### 5. 环境变量（env）
+
+`env` 指令用于设置进程环境变量，两种写法：
+
+    env.deploy#GREET {          # 写法一：ID 指定变量名，命令内容为值
+        hello
+    }
+
+    env.deploy {                # 写法二：YAML 批量设置
+        GREET: hello
+        MODE: dev
+    }
+
+在指令上追加 `.append` 类表示追加而不是覆盖：
+
+    env.deploy#PATH.append {
+        /opt/local/bin
+    }
+
+其他指令通过依赖 `.deploy` 引入这些环境变量：
+
+    all.deploy (.deploy) {
+        echo $GREET
+    }
+
+### 6. 执行选择器
+
+选择器语法与 CSS 一致，支持类型、类、ID、属性的任意组合：
+
+    $ gmake build
+    $ gmake .deploy
+    $ gmake #main
+    $ gmake [platform=linux]
+    $ gmake .production[platform=linux]
+
+### 7. 指令参数
+
+第一个命令行参数是选择器，其后的参数作为本次执行的指令参数，可在命令中用占位符引用：
+
+    run {
+        ./run.sh $@
+    }
+
+    $ gmake run a b
+
+等价于执行 `./run.sh a b`。
+
+- `$@`：展开为全部参数，每个参数仍保持为独立的命令参数；需独立成词，
+  嵌在单词中间（如 `x$@`）时会合并成一个参数。
+- `$1`、`$2`…：第 n 个参数，可与其他文本拼接（如 `--name=$1`）；越界时替换为空字符串。
+- 未被占位符引用的参数会被忽略，不会自动附加到命令末尾。
+- 参数属于本次执行，被执行的指令（含依赖）都可用占位符引用。
+- 参数放在选择器之后；含空格的参数用引号包裹，如 `gmake run "hello world"`。
+- 以 `-` 开头的参数也可正常传入（如 `gmake run --port 3000`），但必须写在选择器之后。
+
+### 8. 完整示例
+
+    var.deploy {
+        bin: out.txt
+    }
+
+    env.deploy#GREET {
+        hi
+    }
+
+    build.deploy (.deploy) {
+        echo "building $bin"
+        touch $bin
+    }
+
     fmt {
-        go fmt main.go;
+        go fmt ./...
     }
-    
+
     clean {
-        rm hello;
+        -rm -f out.txt
     }
 
-### Define Target like css
+    all (build.deploy) {
+        echo "build finished: $bin, $GREET"
+    }
 
-You can define a target like css, for example, define a target with class
+`gmake all` 的输出为：
 
-	clean.deploy {
-	...
-	}
+    building out.txt
+    build finished: out.txt, hi
 
-Or define a target with ID
+## 命令行参数
 
-	clean#deployForTest{
-	...
-	}
+    -nd           不执行依赖，只执行选中的指令
+    -verbose N    日志级别：2 错误（默认）、3 警告、4 信息、5 调试
+    -version      输出版本信息
+    --help        Go flag 默认帮助
 
-### Dependency
+除以上开关外，每次执行都会固定向 stderr 输出 `gmake: using <配置文件绝对路径>`
+（见「命中的配置文件」），该提示没有开关，`-verbose` / `-nd` 不影响它。
 
-You can make target depend on some target using CSS selector, like:
+## 尚未实现
 
-	deploy.main (.deploy) {
-	...
-	}
+以下语法在代码中有入口但当前不生效，请勿依赖：
 
-This target depend on all target with **deploy** class,if you have two target with **deploy** class before this target, they will execute before this target with text order.
+- `import` 指令
+- `file` 指令
+- `--watch` 文件变化监听
+- `$(命令)` 子命令求值
 
-For example
+## License
 
-	a.deploy {
-		echo 1
-	}
-	b.deploy {
-		echo 2
-	}
-	c (.deploy){
-		echo 3
-	}
-
-**gmake c** will print 1,2,3 in order
-
-#### Default Action
-
-if no target is specified, Gmake will execute the latest one.
-
-### Variables
-
-Use the following snippet for create an variable
-
-```
-var.deploy {
-    test: git.oschina.net/mink-tech/bible
-    test2: 23
-}
-```
-
-
-
-#### Variable pseudo
-
-You can use pseudo to follow the different status of variables
-
-```
-action@variable1:updated{
-	echo 1
-}
-```
-
-the echo will only executed when variabe1 is updated
+见 [LICENSE](LICENSE)。

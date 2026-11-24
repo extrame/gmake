@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/sirupsen/logrus"
 )
@@ -44,12 +45,12 @@ func combiner(strs []string) string {
 	return fullstr
 }
 
-// findGMakefile 递归向上查找GMakefile文件
+// findGMakefile 递归向上查找GMakefile文件，返回实际命中文件的绝对路径
 func findGMakefile(dir string) (string, error) {
 	// 检查当前目录是否存在GMakefile
 	filePath := filepath.Join(dir, "GMakefile")
 	if _, err := os.Stat(filePath); err == nil {
-		return dir, nil
+		return actualFileName(dir, filePath), nil
 	}
 
 	// 检查父目录
@@ -60,6 +61,22 @@ func findGMakefile(dir string) (string, error) {
 
 	// 递归查找父目录
 	return findGMakefile(parentDir)
+}
+
+// actualFileName 在大小写不敏感的文件系统（如 macOS 默认的 APFS）上把
+// GMakefile 还原成真实文件名。否则磁盘上的 Gmakefile 也会被命中，
+// 但报出来的路径会写成 GMakefile，与真实文件对不上。
+func actualFileName(dir, fallback string) string {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return fallback
+	}
+	for _, entry := range entries {
+		if strings.EqualFold(entry.Name(), filepath.Base(fallback)) {
+			return filepath.Join(dir, entry.Name())
+		}
+	}
+	return fallback
 }
 
 // Starts processing
@@ -84,14 +101,18 @@ func main() {
 		}
 
 		// 查找GMakefile文件
-		gmakeDir, err := findGMakefile(currentDir)
+		gmakeFile, err := findGMakefile(currentDir)
 		if err != nil {
 			fmt.Println("gmake: fatal: could not find GMakefile")
 			return
 		}
 
+		// 报出本次实际命中的配置文件。默认开启、不受 --verbose/--nd 影响；
+		// 写 stderr，避免混进任务命令可能被其他脚本消费的 stdout。
+		fmt.Fprintf(os.Stderr, "gmake: using %s\n", gmakeFile)
+
 		// 切换到找到GMakefile的目录
-		if err := os.Chdir(gmakeDir); err != nil {
+		if err := os.Chdir(filepath.Dir(gmakeFile)); err != nil {
 			fmt.Println("gmake: fatal: could not change directory")
 			return
 		}
@@ -111,10 +132,7 @@ func main() {
 
 		logrus.WithField("skip-dependencies", *nodepenence).Infoln("start exec")
 
-		if len(args) == 0 {
-			AST.Exec(*watch, *nodepenence)
-		} else {
-			AST.Exec(*watch, *nodepenence, args[0])
-		}
+		//第一个参数是选择器，其余是指令参数
+		AST.Exec(*watch, *nodepenence, args...)
 	}
 }
