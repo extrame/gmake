@@ -55,6 +55,10 @@ func (g *Doc) Exec(waitingForWatch bool, nodependencies bool, selectors ...strin
 		os.Exit(0)
 	}
 	ctx := &Context{wait: waitingForWatch, directivesInStack: make(map[int]bool)}
+	if len(selectors) > 1 {
+		//选择器之后的参数传给本次执行的指令
+		ctx.params = selectors[1:]
+	}
 	ctx.load()
 	var execChan = make(chan Result, len(selected))
 	signalNo := 0

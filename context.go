@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"strconv"
 	"strings"
 	"time"
 
@@ -17,6 +18,7 @@ type Context struct {
 	oldVariables      map[string]interface{}
 	wait              bool
 	directivesInStack map[int]bool
+	params            []string //指令参数，如 gmake run a b 中的 a b
 }
 
 func (ctx *Context) markVariableStatus() {
@@ -42,6 +44,8 @@ func (ctx *Context) replaceVar(origin ...string) (dir string, res []string) {
 			}
 		case "$currentDir":
 			res = append(res, getCurrentDirectory())
+		case "$@":
+			res = append(res, ctx.params...)
 		default:
 			explained := os.Expand(word, ctx.expend)
 			if cmd != nil && strings.HasSuffix(explained, ")") {
@@ -70,6 +74,16 @@ func (ctx *Context) replaceVar(origin ...string) (dir string, res []string) {
 }
 
 func (ctx *Context) expend(key string) string {
+	if n, err := strconv.Atoi(key); err == nil {
+		//位置参数，$1 对应第一个参数
+		if n >= 1 && n <= len(ctx.params) {
+			return ctx.params[n-1]
+		}
+		return ""
+	}
+	if key == "@" {
+		return strings.Join(ctx.params, " ")
+	}
 	if v, ok := ctx.Variables[key]; ok {
 		return fmt.Sprintf("%s", v)
 	} else {
